@@ -1,6 +1,7 @@
 # Data files
 data/*.db
 data/*.db-journal
+data/Caddyfile
 
 # Node modules (built in Docker)
 node_modules/

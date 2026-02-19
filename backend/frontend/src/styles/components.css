@@ -40,15 +40,28 @@
 }
 
 .btn-sm {
-  padding: var(--space-sm) var(--space-sm);
+  width: 32px;
+  height: 32px;
+  padding: 0;
   font-size: var(--font-size-xs);
 }
 
+.btn-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
 .btn-icon {
-  padding: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-muted);
+  font-size: 1rem;
 }
 
 .btn-icon:hover:not(:disabled) {
@@ -56,19 +69,41 @@
   color: var(--text);
 }
 
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+label.btn-icon {
+  display: inline-flex;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
 .btn-apply {
-  background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
-  color: #000;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-md);
+  background: var(--bg-input);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+  font-weight: 500;
   animation: pulse-apply 2s infinite;
 }
 
 .btn-apply:hover:not(:disabled) {
-  background: linear-gradient(135deg, #fbbf24 0%, #fb923c 100%);
+  background: rgba(245, 158, 11, 0.15);
 }
 
 .btn-apply:disabled {
   animation: none;
+}
+
+.btn-apply svg {
+  width: 16px;
+  height: 16px;
 }
 
 @keyframes pulse-apply {
