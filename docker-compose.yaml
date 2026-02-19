@@ -11,6 +11,7 @@ services:
             - caddy_data:/data
             - caddy_config:/config
         networks:
+            - internal
             - dev-proxy
         depends_on:
             - api
@@ -30,6 +31,7 @@ services:
             - CADDYFILE_PATH=/app/data/Caddyfile
             - CADDY_API=http://caddy:2019
         networks:
+            - internal
             - dev-proxy
 
 volumes:
@@ -37,5 +39,6 @@ volumes:
     caddy_config:
 
 networks:
+    internal:
     dev-proxy:
         external: true

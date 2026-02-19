@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net"
@@ -313,15 +314,36 @@ func generateCaddyfile() {
 func reloadCaddy(c *gin.Context) {
 	generateCaddyfile()
 
-	// Try to reload Caddy via API
-	resp, err := http.Post(caddyAPI+"/load", "application/json", nil)
+	// Read the generated Caddyfile
+	caddyfileContent, err := os.ReadFile(caddyfilePath)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"message": "Caddyfile regenerated, manual reload may be needed", "warning": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to read Caddyfile", "error": err.Error()})
+		return
+	}
+
+	// Send to Caddy's /load endpoint with Caddyfile adapter
+	req, err := http.NewRequest("POST", caddyAPI+"/load", strings.NewReader(string(caddyfileContent)))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "Caddyfile regenerated", "warning": err.Error()})
+		return
+	}
+	req.Header.Set("Content-Type", "text/caddyfile")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "Caddyfile regenerated, Caddy reload failed", "warning": err.Error()})
 		return
 	}
 	defer resp.Body.Close()
 
-	c.JSON(http.StatusOK, gin.H{"message": "Configuration reloaded"})
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		c.JSON(http.StatusOK, gin.H{"message": "Caddyfile regenerated, Caddy returned error", "warning": string(body)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Proxy reloaded successfully"})
 }
 
 func getHealthStatus(c *gin.Context) {
