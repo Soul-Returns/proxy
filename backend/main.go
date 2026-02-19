@@ -48,13 +48,24 @@ type HealthStatus struct {
 	Tip          string `json:"tip,omitempty"`
 }
 
+// AppliedRoute represents a route that has been applied to Caddy
+type AppliedRoute struct {
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	Domain  string `json:"domain"`
+	Target  string `json:"target"`
+	Enabled bool   `json:"enabled"`
+}
+
 var (
-	db             *sql.DB
-	dbPath         string
-	caddyfilePath  string
-	caddyAPI       string
-	healthCache    = make(map[int64]*HealthStatus)
-	healthCacheMux sync.RWMutex
+	db              *sql.DB
+	dbPath          string
+	caddyfilePath   string
+	caddyAPI        string
+	healthCache     = make(map[int64]*HealthStatus)
+	healthCacheMux  sync.RWMutex
+	appliedState    []AppliedRoute
+	appliedStateMux sync.RWMutex
 )
 
 func main() {
@@ -71,6 +82,7 @@ func main() {
 
 	initDB()
 	generateCaddyfile()
+	saveAppliedState() // Initial state is considered "applied"
 
 	// Start health checker
 	go healthChecker()
@@ -88,6 +100,7 @@ func main() {
 		api.POST("/routes/:id/toggle", toggleRoute)
 		api.GET("/health", getHealthStatus)
 		api.POST("/reload", reloadCaddy)
+		api.GET("/applied-state", getAppliedState)
 		api.GET("/export", exportConfig)
 		api.POST("/import", importConfig)
 	}
@@ -343,7 +356,43 @@ func reloadCaddy(c *gin.Context) {
 		return
 	}
 
+	saveAppliedState()
 	c.JSON(http.StatusOK, gin.H{"message": "Proxy reloaded successfully"})
+}
+
+func saveAppliedState() {
+	rows, err := db.Query("SELECT id, name, domain, target, enabled FROM routes ORDER BY id")
+	if err != nil {
+		log.Printf("Error querying routes for applied state: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	var routes []AppliedRoute
+	for rows.Next() {
+		var r AppliedRoute
+		var enabled int
+		if err := rows.Scan(&r.ID, &r.Name, &r.Domain, &r.Target, &enabled); err != nil {
+			continue
+		}
+		r.Enabled = enabled == 1
+		routes = append(routes, r)
+	}
+
+	appliedStateMux.Lock()
+	appliedState = routes
+	appliedStateMux.Unlock()
+}
+
+func getAppliedState(c *gin.Context) {
+	appliedStateMux.RLock()
+	defer appliedStateMux.RUnlock()
+
+	if appliedState == nil {
+		c.JSON(http.StatusOK, []AppliedRoute{})
+		return
+	}
+	c.JSON(http.StatusOK, appliedState)
 }
 
 func getHealthStatus(c *gin.Context) {

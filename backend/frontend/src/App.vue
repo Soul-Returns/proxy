@@ -6,6 +6,9 @@
         <p class="subtitle">Manage your local development proxy routes</p>
       </div>
       <div class="header-actions">
+        <button v-if="hasUnappliedChanges" class="btn btn-apply" @click="reloadProxy" :disabled="reloading">
+          ⚡ Apply Changes
+        </button>
         <button class="btn btn-icon" @click="reloadProxy" title="Reload Caddy proxy" :disabled="reloading">🔄</button>
         <button class="btn btn-icon" @click="exportConfig" title="Export configuration">⬇️</button>
         <label class="btn btn-icon" title="Import configuration">
@@ -70,7 +73,10 @@
           </thead>
           <tbody>
             <tr v-for="route in routes" :key="route.id">
-              <td>{{ route.name }}</td>
+              <td class="name-cell">
+                <span class="change-indicator" v-if="isRouteChanged(route.id)"></span>
+                {{ route.name }}
+              </td>
               <td><a :href="'http://' + route.domain" target="_blank" class="domain-link">{{ route.domain }}</a></td>
               <td class="target-text">{{ route.target }}</td>
               <td>
@@ -288,11 +294,47 @@ export default {
       editingRoute: null,
       healthDetails: null,
       reloading: false,
+      appliedState: [],
       toast: { show: false, message: '', type: 'success' }
+    }
+  },
+  computed: {
+    hasUnappliedChanges() {
+      return this.changedRouteIds.size > 0
+    },
+    changedRouteIds() {
+      const changed = new Set()
+      const appliedMap = new Map(this.appliedState.map(r => [r.id, r]))
+      
+      // Check for modified or new routes
+      for (const route of this.routes) {
+        const applied = appliedMap.get(route.id)
+        if (!applied) {
+          changed.add(route.id) // New route
+        } else if (
+          applied.name !== route.name ||
+          applied.domain !== route.domain ||
+          applied.target !== route.target ||
+          applied.enabled !== route.enabled
+        ) {
+          changed.add(route.id) // Modified route
+        }
+      }
+      
+      // Check for deleted routes (in applied but not in current)
+      const currentIds = new Set(this.routes.map(r => r.id))
+      for (const applied of this.appliedState) {
+        if (!currentIds.has(applied.id)) {
+          changed.add(applied.id) // Deleted route (mark with special ID)
+        }
+      }
+      
+      return changed
     }
   },
   mounted() {
     this.fetchRoutes()
+    this.fetchAppliedState()
     this.fetchHealth()
     setInterval(() => this.fetchHealth(), 30000)
   },
@@ -308,13 +350,20 @@ export default {
         statuses.forEach(s => { this.healthStatus[s.route_id] = s })
       } catch (e) { console.error(e) }
     },
+    async fetchAppliedState() {
+      try { this.appliedState = await (await fetch('/api/applied-state')).json() }
+      catch (e) { console.error(e) }
+    },
+    isRouteChanged(id) {
+      return this.changedRouteIds.has(id)
+    },
     async addRoute() {
       try {
         const res = await fetch('/api/routes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.newRoute) })
         if (!res.ok) throw new Error('Failed')
         this.newRoute = { name: '', domain: '', target: '', enabled: true }
         await this.fetchRoutes()
-        this.showToast('Route added', 'success')
+        this.showToast('Route added - click Apply Changes to update proxy', 'success')
       } catch (e) { this.showToast(e.message, 'error') }
     },
     async toggleRoute(route) { await fetch(`/api/routes/${route.id}/toggle`, { method: 'POST' }); await this.fetchRoutes() },
@@ -323,13 +372,13 @@ export default {
       await fetch(`/api/routes/${this.editingRoute.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.editingRoute) })
       this.editingRoute = null
       await this.fetchRoutes()
-      this.showToast('Route updated', 'success')
+      this.showToast('Route updated - click Apply Changes to update proxy', 'success')
     },
     async deleteRoute(route) {
       if (!confirm(`Delete "${route.name}"?`)) return
       await fetch(`/api/routes/${route.id}`, { method: 'DELETE' })
       await this.fetchRoutes()
-      this.showToast('Route deleted', 'success')
+      this.showToast('Route deleted - click Apply Changes to update proxy', 'success')
     },
     getHealthClass(id) { const s = this.healthStatus[id]; return s ? (s.healthy ? 'status-healthy' : 'status-unhealthy') : 'status-unknown' },
     getHealthText(id) { const s = this.healthStatus[id]; return s ? (s.healthy ? 'Healthy' : 'Unhealthy') : 'Checking...' },
@@ -355,6 +404,7 @@ export default {
       try {
         const res = await fetch('/api/reload', { method: 'POST' })
         const data = await res.json()
+        await this.fetchAppliedState()
         this.showToast(data.message || 'Proxy reloaded', 'success')
         await this.fetchHealth()
       } catch (e) {
