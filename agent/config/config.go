@@ -16,6 +16,7 @@ type Config struct {
 	RunInBackground     bool   `json:"run_in_background"`
 	MaxBackups          int    `json:"max_backups"`
 	GUIPort             int    `json:"gui_port"`
+	UpdateChannel       string `json:"update_channel"` // "release" or "pre-release"
 }
 
 var (
@@ -33,6 +34,7 @@ func DefaultConfig() Config {
 		RunInBackground:     true,
 		MaxBackups:          20,
 		GUIPort:             9099,
+		UpdateChannel:       "release",
 	}
 }
 

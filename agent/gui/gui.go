@@ -12,6 +12,7 @@ import (
 	"devproxy-agent/config"
 	"devproxy-agent/hosts"
 	agentsync "devproxy-agent/sync"
+	"devproxy-agent/version"
 )
 
 //go:embed static/index.html
@@ -40,6 +41,8 @@ func Start(port int) {
 	mux.HandleFunc("/api/entries", cors(handleEntries))
 	mux.HandleFunc("/api/backups", cors(handleBackups))
 	mux.HandleFunc("/api/restore", cors(handleRestore))
+	mux.HandleFunc("/api/version", cors(handleVersion))
+	mux.HandleFunc("/api/updates/check", cors(handleUpdateCheck))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	log.Printf("Agent config GUI available at http://%s", addr)
@@ -186,4 +189,48 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+func handleVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]string{
+		"version": version.GetVersion(),
+	})
+}
+
+func handleUpdateCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body for channel override
+	var req struct {
+		Channel string `json:"channel"`
+	}
+
+	// Try to decode body, but don't fail if empty
+	json.NewDecoder(r.Body).Decode(&req)
+
+	// Determine channel
+	var channel version.UpdateChannel
+	if req.Channel != "" {
+		channel = version.UpdateChannel(req.Channel)
+	} else {
+		cfg := config.Get()
+		channel = version.UpdateChannel(cfg.UpdateChannel)
+	}
+
+	// Validate channel
+	if channel != version.ChannelRelease && channel != version.ChannelPreRelease {
+		channel = version.ChannelRelease
+	}
+
+	updateInfo, err := version.CheckForUpdates(channel)
+	if err != nil {
+		// Still return the info even on error (it contains error details)
+		writeJSON(w, updateInfo)
+		return
+	}
+
+	writeJSON(w, updateInfo)
 }

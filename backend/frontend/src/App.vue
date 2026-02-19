@@ -14,6 +14,9 @@
         <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">
           Routes
         </button>
+        <button :class="['tab', { active: currentTab === 'updates' }]" @click="currentTab = 'updates'">
+          Updates
+        </button>
         <button :class="['tab', { active: currentTab === 'agent' }]" @click="currentTab = 'agent'">
           Host Agent
         </button>
@@ -33,6 +36,7 @@
 
     <!-- Routes Tab -->
     <div v-show="currentTab === 'routes'">
+      <UpdateBanner :updateInfo="updateInfo" />
       <RouteForm @submit="handleAddRoute" />
       <RouteTable
         :routes="routes"
@@ -47,6 +51,9 @@
         @show-docs="currentTab = 'docs'"
       />
     </div>
+
+    <!-- Updates Tab -->
+    <UpdateTab v-show="currentTab === 'updates'" @switch-tab="handleSwitchTab" @show-toast="handleToast" />
 
     <!-- Host Agent Tab -->
     <AgentTab v-show="currentTab === 'agent'" />
@@ -91,10 +98,13 @@ import RouteForm from './components/RouteForm.vue'
 import RouteTable from './components/RouteTable.vue'
 import DocsTab from './components/DocsTab.vue'
 import AgentTab from './components/AgentTab.vue'
+import UpdateTab from './components/UpdateTab.vue'
 import ToastNotification from './components/ToastNotification.vue'
+import UpdateBanner from './components/UpdateBanner.vue'
 import EditRouteModal from './components/modals/EditRouteModal.vue'
 import HealthModal from './components/modals/HealthModal.vue'
 import LoadingModal from './components/modals/LoadingModal.vue'
+import { agentApi } from './api'
 
 export default {
   name: 'App',
@@ -104,7 +114,9 @@ export default {
     RouteTable,
     DocsTab,
     AgentTab,
+    UpdateTab,
     ToastNotification,
+    UpdateBanner,
     EditRouteModal,
     HealthModal,
     LoadingModal,
@@ -154,14 +166,19 @@ export default {
       editingRoute: null,
       healthDetails: null,
       agentReachable: false,
+      updateInfo: null,
     }
   },
   mounted() {
     this.checkAgent()
+    this.checkForUpdates()
     this._agentInterval = setInterval(() => this.checkAgent(), 5000)
+    // Check for updates every 30 minutes
+    this._updateInterval = setInterval(() => this.checkForUpdates(), 30 * 60 * 1000)
   },
   beforeUnmount() {
     if (this._agentInterval) clearInterval(this._agentInterval)
+    if (this._updateInterval) clearInterval(this._updateInterval)
   },
   methods: {
     async checkAgent() {
@@ -198,6 +215,26 @@ export default {
       if (details) {
         this.healthDetails = details
       }
+    },
+    async checkForUpdates() {
+      try {
+        const data = await agentApi.checkUpdates()
+        this.updateInfo = data
+      } catch (error) {
+        // Silently fail - agent might not be running
+        console.debug('Failed to check for updates:', error.message)
+      }
+    },
+    handleSwitchTab(tab) {
+      this.currentTab = tab
+    },
+    handleToast({ message, type }) {
+      this.toast.message = message
+      this.toast.type = type
+      this.toast.show = true
+      setTimeout(() => {
+        this.toast.show = false
+      }, 3000)
     },
   },
 }

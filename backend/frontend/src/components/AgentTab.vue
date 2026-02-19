@@ -1,5 +1,44 @@
 <template>
   <div class="docs">
+    <!-- Update Banner -->
+    <UpdateBanner :updateInfo="updateInfo" />
+
+    <!-- Version Status Card -->
+    <div class="card" v-if="agentVersion || updateInfo">
+      <h2>📦 Version Status</h2>
+      <div class="docs-section">
+        <div class="version-info">
+          <div class="version-row" v-if="agentVersion">
+            <span class="label">Current Version:</span>
+            <span class="value"><code>v{{ agentVersion }}</code></span>
+          </div>
+          <div class="version-row" v-if="!agentVersion && !checkingVersion">
+            <span class="label">Agent Status:</span>
+            <span class="value text-muted">Not running or not accessible</span>
+          </div>
+          <div class="version-row" v-if="updateInfo && updateInfo.latest_version">
+            <span class="label">Latest Version:</span>
+            <span class="value"><code>v{{ updateInfo.latest_version }}</code></span>
+          </div>
+          <div class="version-row" v-if="updateInfo && updateInfo.checked_at">
+            <span class="label">Last Checked:</span>
+            <span class="value text-muted">{{ formatDate(updateInfo.checked_at) }}</span>
+          </div>
+          <div class="version-row" v-if="updateInfo && updateInfo.error">
+            <span class="label">Check Error:</span>
+            <span class="value error-text">{{ updateInfo.error }}</span>
+          </div>
+        </div>
+        <button 
+          @click="checkForUpdates" 
+          :disabled="checkingUpdates"
+          class="btn-check-updates"
+        >
+          {{ checkingUpdates ? 'Checking...' : '🔄 Check for Updates' }}
+        </button>
+      </div>
+    </div>
+
     <!-- Overview Card -->
     <div class="card">
       <h2>🖥️ Host Agent</h2>
@@ -109,8 +148,69 @@ sudo mv devproxy-agent /usr/local/bin/</pre>
 </template>
 
 <script>
+import { agentApi } from '../api'
+import UpdateBanner from './UpdateBanner.vue'
+
 export default {
   name: 'AgentTab',
+  components: {
+    UpdateBanner,
+  },
+  data() {
+    return {
+      agentVersion: null,
+      updateInfo: null,
+      checkingVersion: false,
+      checkingUpdates: false,
+    }
+  },
+  mounted() {
+    this.fetchVersion()
+    this.checkForUpdates()
+    // Check for updates every 30 minutes
+    this._updateInterval = setInterval(() => this.checkForUpdates(), 30 * 60 * 1000)
+  },
+  beforeUnmount() {
+    if (this._updateInterval) clearInterval(this._updateInterval)
+  },
+  methods: {
+    async fetchVersion() {
+      this.checkingVersion = true
+      try {
+        const data = await agentApi.getVersion()
+        this.agentVersion = data.version
+      } catch (error) {
+        console.warn('Failed to fetch agent version:', error.message)
+      } finally {
+        this.checkingVersion = false
+      }
+    },
+    async checkForUpdates() {
+      this.checkingUpdates = true
+      try {
+        const data = await agentApi.checkUpdates()
+        this.updateInfo = data
+      } catch (error) {
+        console.warn('Failed to check for updates:', error.message)
+      } finally {
+        this.checkingUpdates = false
+      }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diff = now - date
+      const minutes = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+      const days = Math.floor(diff / 86400000)
+
+      if (minutes < 1) return 'Just now'
+      if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+      if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+      if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
+      return date.toLocaleDateString()
+    },
+  },
 }
 </script>
 
@@ -166,6 +266,66 @@ export default {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-family: monospace;
+}
+
+.version-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-row .label {
+  font-weight: 500;
+  color: var(--text-muted);
+  min-width: 120px;
+}
+
+.version-row .value {
+  color: var(--text);
+}
+
+.version-row .value code {
+  padding: 0.125rem 0.375rem;
+  background: var(--bg-input);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+}
+
+.btn-check-updates {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-check-updates:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-check-updates:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 </style>

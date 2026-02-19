@@ -16,9 +16,8 @@ import (
 	"devproxy-agent/gui"
 	agentsync "devproxy-agent/sync"
 	"devproxy-agent/tray"
+	"devproxy-agent/version"
 )
-
-var version = "dev"
 
 func main() {
 	configDir := flag.String("config-dir", "", "Config directory (default: platform-specific)")
@@ -28,12 +27,12 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("devproxy-agent %s\n", version)
+		fmt.Printf("devproxy-agent %s\n", version.GetVersion())
 		os.Exit(0)
 	}
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Printf("DevProxy Agent %s starting...", version)
+	log.Printf("DevProxy Agent %s starting...", version.GetVersion())
 
 	// Initialize config
 	if err := config.Init(*configDir); err != nil {

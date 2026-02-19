@@ -80,6 +80,11 @@ func setupRoutes(r *gin.Engine) {
 		// Host Agent
 		api.GET("/agent/info", handlers.GetAgentInfo)
 		api.GET("/agent/download/:os", handlers.DownloadAgent)
+		api.GET("/agent/version", handlers.GetAgentVersion)
+		api.POST("/agent/updates/check", handlers.CheckAgentUpdates)
+
+		// Version
+		api.GET("/version", handlers.GetBackendVersion)
 	}
 }
 

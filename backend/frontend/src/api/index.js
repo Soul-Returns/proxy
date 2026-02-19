@@ -51,9 +51,19 @@ export const configApi = {
   import: (routes) => request('/import', { method: 'POST', body: JSON.stringify(routes) }),
 }
 
+// Agent API
+export const agentApi = {
+  getVersion: () => request('/agent/version'),
+  checkUpdates: (channel = null) => {
+    const body = channel ? JSON.stringify({ channel }) : undefined
+    return request('/agent/updates/check', { method: 'POST', body })
+  },
+}
+
 export default {
   routes: routesApi,
   health: healthApi,
   proxy: proxyApi,
   config: configApi,
+  agent: agentApi,
 }

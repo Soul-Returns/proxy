@@ -1,0 +1,590 @@
+<template>
+  <div class="updates">
+    <!-- Backend Update Card -->
+    <div class="card">
+      <h2>🚀 DevProxy Backend</h2>
+      <div class="docs-section">
+        <div class="version-display">
+          <div class="version-row">
+            <span class="label">Current Version:</span>
+            <span class="value">
+              <code v-if="backendVersion">v{{ backendVersion }}</code>
+              <span v-else class="loading">Loading...</span>
+            </span>
+          </div>
+          <div class="version-row" v-if="backendUpdateInfo && backendUpdateInfo.latest_version">
+            <span class="label">Latest from GitHub:</span>
+            <span class="value"><code>v{{ backendUpdateInfo.latest_version }}</code></span>
+          </div>
+          <div class="version-row" v-if="backendUpdateInfo && backendUpdateInfo.checked_at">
+            <span class="label">Last Checked:</span>
+            <span class="value text-muted">{{ formatDate(backendUpdateInfo.checked_at) }}</span>
+          </div>
+          <div class="version-row">
+            <span class="label">Update Channel:</span>
+            <span class="value">
+              <select v-model="backendUpdateChannel" @change="onBackendChannelChange" class="channel-select">
+                <option value="release">Release (Stable)</option>
+                <option value="pre-release">Pre-Release (Beta)</option>
+              </select>
+            </span>
+          </div>
+        </div>
+
+        <div class="update-status" v-if="backendUpdateInfo">
+          <div v-if="backendUpdateInfo.available" class="status-badge update-available">
+            ⚠️ Update Available
+          </div>
+          <div v-else class="status-badge up-to-date">
+            ✅ Up to Date
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button 
+            @click="checkBackendUpdates" 
+            :disabled="checkingBackend"
+            class="btn-secondary"
+          >
+            {{ checkingBackend ? 'Checking...' : '🔄 Check for Updates' }}
+          </button>
+          <a
+            v-if="backendUpdateInfo && backendUpdateInfo.available && backendUpdateInfo.release"
+            :href="backendUpdateInfo.release.html_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-primary"
+          >
+            📦 View Release on GitHub
+          </a>
+          <button
+            v-else-if="backendUpdateInfo && !backendUpdateInfo.available"
+            disabled
+            class="btn-primary btn-disabled"
+            title="You are on the latest version"
+          >
+            ✅ You're Up to Date
+          </button>
+        </div>
+
+        <!-- Update Instructions (Always Visible, Collapsible) -->
+        <div class="collapsible-section">
+          <button @click="showBackendInstructions = !showBackendInstructions" class="collapsible-header">
+            <span class="collapsible-icon">{{ showBackendInstructions ? '▼' : '▶' }}</span>
+            <span>Update Instructions</span>
+          </button>
+          <div v-show="showBackendInstructions" class="update-instructions">
+          <h3>📋 Update Instructions</h3>
+          <div class="instructions-box">
+            <p><strong>To update the DevProxy backend:</strong></p>
+            <ol>
+              <li>Stop the running containers: <code>docker compose down</code></li>
+              <li>Update the VERSION file with the new version number</li>
+              <li>Rebuild and start: <code>docker compose up -d --build</code></li>
+            </ol>
+          </div>
+            <div class="release-notes" v-if="backendUpdateInfo && backendUpdateInfo.available && backendUpdateInfo.release && backendUpdateInfo.release.body">
+              <h4>Release Notes:</h4>
+              <div class="notes-content" v-html="formatReleaseNotes(backendUpdateInfo.release.body)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Update Card -->
+    <div class="card">
+      <h2>🖥️ Host Agent</h2>
+      <div class="docs-section">
+        <div class="version-display">
+          <div class="version-row">
+            <span class="label">Current Version:</span>
+            <span class="value">
+              <code v-if="agentInfo && agentInfo.agent_version">v{{ agentInfo.agent_version }}</code>
+              <span v-else-if="agentRunningVersion">
+                <code>v{{ agentRunningVersion }}</code>
+                <span class="version-hint">(running)</span>
+              </span>
+              <span v-else class="text-muted">Not installed</span>
+            </span>
+          </div>
+          <div class="version-row" v-if="agentInfo && agentInfo.agent_version">
+            <span class="label">Newest Built:</span>
+            <span class="value">
+              <code>v{{ agentInfo.agent_version }}</code>
+              <span class="version-hint">built with docker compose build</span>
+            </span>
+          </div>
+          <div class="version-row" v-if="agentUpdateInfo && agentUpdateInfo.latest_version">
+            <span class="label">Latest from GitHub:</span>
+            <span class="value"><code>v{{ agentUpdateInfo.latest_version }}</code></span>
+          </div>
+          <div class="version-row" v-if="agentUpdateInfo && agentUpdateInfo.checked_at">
+            <span class="label">Last Checked:</span>
+            <span class="value text-muted">{{ formatDate(agentUpdateInfo.checked_at) }}</span>
+          </div>
+        </div>
+
+        <div class="update-status" v-if="agentUpdateInfo">
+          <div v-if="agentUpdateInfo.available" class="status-badge update-available">
+            ⚠️ Update Available
+          </div>
+          <div v-else class="status-badge up-to-date">
+            ✅ Up to Date
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button 
+            @click="checkAgentUpdates" 
+            :disabled="checkingAgent"
+            class="btn-secondary"
+          >
+            {{ checkingAgent ? 'Checking...' : '🔄 Check for Updates' }}
+          </button>
+          <a
+            v-if="agentUpdateInfo && agentUpdateInfo.available && agentUpdateInfo.release"
+            :href="agentUpdateInfo.release.html_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-primary"
+          >
+            📦 View Release on GitHub
+          </a>
+          <button
+            v-else-if="agentUpdateInfo && !agentUpdateInfo.available"
+            disabled
+            class="btn-primary btn-disabled"
+            title="You are on the latest version"
+          >
+            ✅ You're Up to Date
+          </button>
+        </div>
+
+        <!-- Agent Update Instructions (Always Visible, Collapsible) -->
+        <div class="collapsible-section">
+          <button @click="showAgentInstructions = !showAgentInstructions" class="collapsible-header">
+            <span class="collapsible-icon">{{ showAgentInstructions ? '▼' : '▶' }}</span>
+            <span>Update Instructions</span>
+          </button>
+          <div v-show="showAgentInstructions" class="update-instructions">
+          <h3>📋 Agent Update Instructions</h3>
+          <div class="instructions-box">
+            <h4>Windows</h4>
+            <ol>
+              <li>Stop the running agent (right-click tray icon → Exit)</li>
+              <li>Download the new version from the <a href="#" @click.prevent="goToAgentTab">Host Agent tab</a></li>
+              <li>Replace the old executable with the new one</li>
+              <li>Run as administrator</li>
+            </ol>
+            <h4>Linux</h4>
+            <ol>
+              <li>Stop the agent: <code>sudo killall devproxy-agent</code></li>
+              <li>Download new version: <code>curl -O http://localhost:8090/api/agent/download/linux</code></li>
+              <li>Replace: <code>sudo mv devproxy-agent-v{{ agentUpdateInfo && agentUpdateInfo.latest_version ? agentUpdateInfo.latest_version : 'X.X.X' }} /usr/local/bin/devproxy-agent</code></li>
+              <li>Set permissions: <code>sudo chmod +x /usr/local/bin/devproxy-agent</code></li>
+              <li>Restart: <code>sudo devproxy-agent</code></li>
+            </ol>
+          </div>
+            <div class="release-notes" v-if="agentUpdateInfo && agentUpdateInfo.available && agentUpdateInfo.release && agentUpdateInfo.release.body">
+              <h4>Release Notes:</h4>
+              <div class="notes-content" v-html="formatReleaseNotes(agentUpdateInfo.release.body)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { agentApi } from '../api'
+
+export default {
+  name: 'UpdateTab',
+  data() {
+    return {
+      backendVersion: null,
+      agentInfo: null,
+      agentRunningVersion: null,
+      backendUpdateInfo: null,
+      agentUpdateInfo: null,
+      checkingBackend: false,
+      checkingAgent: false,
+      showBackendInstructions: false,
+      showAgentInstructions: false,
+      backendUpdateChannel: 'release',
+    }
+  },
+  mounted() {
+    this.fetchVersions()
+    this.checkBackendUpdates()
+    this.checkAgentUpdates()
+  },
+  methods: {
+    async fetchVersions() {
+      try {
+        // Fetch backend version
+        const backendResp = await fetch('/api/version')
+        const backendData = await backendResp.json()
+        this.backendVersion = backendData.version
+
+        // Fetch agent info
+        const agentResp = await fetch('/api/agent/info')
+        const agentData = await agentResp.json()
+        this.agentInfo = agentData
+
+        // Try to get running agent version
+        try {
+          const runningAgentData = await agentApi.getVersion()
+          this.agentRunningVersion = runningAgentData.version
+        } catch {
+          // Agent not running
+        }
+      } catch (error) {
+        console.error('Failed to fetch versions:', error)
+      }
+    },
+    async checkBackendUpdates() {
+      this.checkingBackend = true
+      try {
+        // Check updates for backend via agent (which checks GitHub) with selected channel
+        const data = await agentApi.checkUpdates(this.backendUpdateChannel)
+        this.backendUpdateInfo = data
+        
+        // Show toast if up to date
+        if (data && !data.available) {
+          this.showToast('✅ You\'re using the newest version', 'success')
+        }
+      } catch (error) {
+        console.warn('Failed to check backend updates:', error)
+      } finally {
+        this.checkingBackend = false
+      }
+    },
+    async checkAgentUpdates() {
+      this.checkingAgent = true
+      try {
+        const data = await agentApi.checkUpdates()
+        this.agentUpdateInfo = data
+        
+        // Show toast if up to date
+        if (data && !data.available) {
+          this.showToast('✅ You\'re using the newest version', 'success')
+        }
+      } catch (error) {
+        console.warn('Failed to check agent updates:', error)
+      } finally {
+        this.checkingAgent = false
+      }
+    },
+    onBackendChannelChange() {
+      // Re-check updates with new channel
+      this.checkBackendUpdates()
+    },
+    showToast(message, type = 'info') {
+      this.$emit('show-toast', { message, type })
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diff = now - date
+      const minutes = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+      const days = Math.floor(diff / 86400000)
+
+      if (minutes < 1) return 'Just now'
+      if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+      if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+      if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
+      return date.toLocaleDateString()
+    },
+    formatReleaseNotes(body) {
+      if (!body) return ''
+      
+      // Simple markdown conversion
+      return body
+        .replace(/^### (.+)$/gm, '<h5>$1</h5>')
+        .replace(/^## (.+)$/gm, '<h4>$1</h4>')
+        .replace(/^# (.+)$/gm, '<h3>$1</h3>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/^(\d+)\.\s(.+)$/gm, '<div class="note-step"><strong>$1.</strong> $2</div>')
+    },
+    goToAgentTab() {
+      this.$emit('switch-tab', 'agent')
+    },
+  },
+}
+</script>
+
+<style scoped>
+.updates {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.version-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--bg-input);
+  border-radius: 0.5rem;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-row .label {
+  font-weight: 500;
+  color: var(--text-muted);
+  min-width: 140px;
+}
+
+.version-row .value {
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-row .value code {
+  padding: 0.125rem 0.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: var(--primary);
+}
+
+.version-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: 0.5rem;
+}
+
+.channel-select {
+  padding: 0.375rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.channel-select:hover {
+  border-color: var(--primary);
+}
+
+.channel-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.update-status {
+  margin-bottom: 1rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.update-available {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  color: rgb(249, 115, 22);
+}
+
+.up-to-date {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.2) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: rgb(22, 163, 74);
+}
+
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled):not(.btn-disabled) {
+  background: #2563eb;
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.collapsible-section {
+  margin-top: 1rem;
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.collapsible-header:hover {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.collapsible-icon {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+
+.update-instructions {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.update-instructions h3,
+.update-instructions h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.update-instructions h4 {
+  font-size: 1rem;
+  margin-top: 1.5rem;
+}
+
+.instructions-box {
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.instructions-box ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.instructions-box li {
+  margin: 0.5rem 0;
+}
+
+.instructions-box code {
+  padding: 0.125rem 0.375rem;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.release-notes {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.notes-content {
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.notes-content code {
+  padding: 0.125rem 0.375rem;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.notes-content h3, .notes-content h4, .notes-content h5 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-step {
+  padding: 0.5rem 0;
+}
+
+.release-link-box {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.release-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.release-link:hover {
+  text-decoration: underline;
+}
+</style>

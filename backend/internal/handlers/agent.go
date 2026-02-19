@@ -1,10 +1,16 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
+	"devproxy/internal/version"
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,29 +46,153 @@ func DownloadAgent(c *gin.Context) {
 // GetAgentInfo returns information about available agent downloads.
 func GetAgentInfo(c *gin.Context) {
 	platforms := []gin.H{}
+	agentVersion := getAgentVersionFromFiles()
 
-	if _, err := os.Stat(filepath.Join(agentDir, "devproxy-agent.exe")); err == nil {
-		info, _ := os.Stat(filepath.Join(agentDir, "devproxy-agent.exe"))
+	// Look for versioned executables
+	files, _ := filepath.Glob(filepath.Join(agentDir, "devproxy-agent*.exe"))
+	for _, file := range files {
+		info, _ := os.Stat(file)
+		filename := filepath.Base(file)
 		platforms = append(platforms, gin.H{
 			"os":       "windows",
-			"filename": "devproxy-agent.exe",
+			"filename": filename,
 			"size":     info.Size(),
 			"url":      "/api/agent/download/windows",
+			"version":  agentVersion,
 		})
+		break // Use first match
 	}
 
-	if _, err := os.Stat(filepath.Join(agentDir, "devproxy-agent")); err == nil {
-		info, _ := os.Stat(filepath.Join(agentDir, "devproxy-agent"))
+	files, _ = filepath.Glob(filepath.Join(agentDir, "devproxy-agent"))
+	for _, file := range files {
+		if strings.HasSuffix(file, ".exe") {
+			continue
+		}
+		info, _ := os.Stat(file)
+		filename := filepath.Base(file)
 		platforms = append(platforms, gin.H{
 			"os":       "linux",
-			"filename": "devproxy-agent",
+			"filename": filename,
 			"size":     info.Size(),
 			"url":      "/api/agent/download/linux",
+			"version":  agentVersion,
 		})
+		break
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"available": len(platforms) > 0,
-		"platforms": platforms,
+		"available":       len(platforms) > 0,
+		"platforms":       platforms,
+		"agent_version":   agentVersion,
+		"backend_version": version.GetVersion(),
 	})
+}
+
+// GetAgentVersion queries the running agent for its version
+func GetAgentVersion(c *gin.Context) {
+	version, err := queryAgent("http://localhost:9099/api/version")
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error":   "Agent not running or not accessible",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(version, &result); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse agent response"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// CheckAgentUpdates triggers an update check on the running agent
+func CheckAgentUpdates(c *gin.Context) {
+	// Parse optional channel parameter
+	var req struct {
+		Channel string `json:"channel"`
+	}
+	// Use ShouldBindJSON to avoid errors on empty body
+	c.ShouldBindJSON(&req)
+
+	// Create request body for agent
+	var body []byte
+	if req.Channel != "" {
+		body, _ = json.Marshal(map[string]string{"channel": req.Channel})
+	}
+
+	updateInfo, err := queryAgentWithBody("http://localhost:9099/api/updates/check", body)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error":   "Agent not running or not accessible",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(updateInfo, &result); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse agent response"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// queryAgent makes an HTTP request to the agent's local API
+func queryAgent(url string) ([]byte, error) {
+	return queryAgentWithBody(url, nil)
+}
+
+// queryAgentWithBody makes an HTTP request to the agent's local API with optional body
+func queryAgentWithBody(url string, body []byte) ([]byte, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	var req *http.Request
+	var err error
+
+	// POST for update check, GET for version
+	if url == "http://localhost:9099/api/updates/check" {
+		if body != nil {
+			req, err = http.NewRequest("POST", url, strings.NewReader(string(body)))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req, err = http.NewRequest("POST", url, nil)
+		}
+	} else {
+		req, err = http.NewRequest("GET", url, nil)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to agent: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("agent returned status %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
+}
+
+// getAgentVersionFromFiles reads the agent version from VERSION file
+func getAgentVersionFromFiles() string {
+	data, err := os.ReadFile("/app/VERSION")
+	if err != nil {
+		return "unknown"
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "AGENT_VERSION=") {
+			return strings.TrimPrefix(line, "AGENT_VERSION=")
+		}
+	}
+	return "unknown"
 }

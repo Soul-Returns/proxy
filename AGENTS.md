@@ -52,6 +52,8 @@ Standalone Go application that runs on the host machine to automatically sync De
 
 ## Development Commands
 
+**IMPORTANT**: This project is developed and run within the Docker Compose stack. All Go, Node.js, and other dependencies are available inside the containers. You should NOT need to install Go, Node, or other tools on your host machine.
+
 ### Main Project
 ```bash
 # Start DevProxy (builds all components)
@@ -69,34 +71,45 @@ docker compose down
 
 # Rebuild after code changes
 docker compose up -d --build
+
+# Execute commands inside the API container
+docker compose exec api sh
 ```
 
 ### Backend Development (Go)
+Backend development happens inside the Docker container, but you can also run locally if needed.
+
 ```bash
-# From backend/ directory
+# Run commands inside the container (recommended)
+docker compose exec api go test ./...
+docker compose exec api go build -o devproxy-api
+
+# OR run locally from backend/ directory (requires Go 1.22+ installed)
 cd backend
-
-# Run locally (requires Go 1.22+)
 go run main.go
-
-# Build locally
 go build -o devproxy-api
-
-# Run tests
 go test ./...
-
-# Dependencies
 go mod tidy
 ```
 
 ### Host Agent Development (Go)
+The agent is built inside the Docker container during the build process, but runs on the host machine.
+
 ```bash
-# From agent/ directory
+# Build agent binaries using Docker (recommended - no Go installation required)
+# This builds both Windows and Linux binaries inside the container
+docker compose build --build-arg VERSION=1.0.0
+
+# Agent binaries will be available at:
+# - Download from UI: http://localhost:8090 → Host Agent tab
+# - Inside container: docker compose exec api ls /app/agent
+
+# For local development (requires Go 1.22+ installed)
 cd agent
 
 # Run locally (requires admin/sudo for hosts file access)
 # Windows:
-go run . (Right-click IDE and run as administrator)
+go run . # (Right-click IDE and run as administrator)
 
 # Linux:
 sudo go run .
@@ -104,11 +117,14 @@ sudo go run .
 # Build for current platform
 go build -o devproxy-agent
 
+# Build with version
+go build -ldflags="-X devproxy-agent/version.Current=1.0.0" -o devproxy-agent
+
 # Cross-compile for Windows
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -o devproxy-agent.exe
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui -X devproxy-agent/version.Current=1.0.0" -o devproxy-agent.exe
 
 # Cross-compile for Linux
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o devproxy-agent
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X devproxy-agent/version.Current=1.0.0" -o devproxy-agent
 
 # Run tests
 go test ./...
@@ -118,20 +134,25 @@ go mod tidy
 ```
 
 ### Frontend Development (Vue.js)
+Frontend is built inside the Docker container, but you can also run a dev server locally.
+
 ```bash
-# From backend/frontend/ directory
+# Build frontend inside container (recommended)
+docker compose build
+
+# For local development with hot reload (requires Node.js installed)
 cd backend/frontend
 
 # Install dependencies
 npm install
 
-# Dev server with hot reload
+# Dev server with hot reload (accessible at http://localhost:5173)
 npm run dev
 
 # Build for production
 npm run build
 
-# Output goes to backend/frontend/dist/ (embedded by Go)
+# Output goes to backend/frontend/dist/ (embedded by Go during Docker build)
 ```
 
 ## Docker Network Setup
@@ -162,3 +183,53 @@ networks:
 - **Applied State**: The API tracks the last successfully applied Caddyfile configuration to detect pending changes in the UI.
 - **Hosts File Sync**: The agent uses a marker system to identify its managed entries, creates timestamped backups before each write, and prunes old backups.
 - **Embedded Frontend**: The Vue.js frontend is compiled and embedded into the Go binary using `//go:embed`, so the API serves a fully self-contained SPA.
+- **Versioning & Updates**: The agent includes built-in version checking against GitHub releases (https://github.com/Soul-Returns/proxy). Version is set at build time via ldflags. Users can select between "release" and "pre-release" update channels.
+
+## Versioning and Updates
+
+### Version Management
+Version numbers for both backend and agent are centrally managed in the `VERSION` file at the project root:
+```
+BACKEND_VERSION=1.0.0
+AGENT_VERSION=1.0.0
+```
+
+**To update versions:**
+1. Edit the `VERSION` file with new version numbers
+2. Rebuild: `docker compose build`
+3. The build process automatically:
+   - Embeds versions into binaries via ldflags
+   - Creates versioned agent binaries: `devproxy-agent-v1.0.0.exe` and `devproxy-agent-v1.0.0`
+   - Creates non-versioned copies for backwards compatibility
+
+### Update System Architecture
+1. **Version Package** (`agent/version/`): Manages version info and GitHub API integration
+2. **Update Channels**: Users can choose between "release" (stable) or "pre-release" (beta) updates
+3. **Update Check Flow**:
+   - Agent GUI endpoint: `localhost:9099/api/updates/check` (POST)
+   - Backend API proxies to agent: `/api/agent/updates/check` (POST)
+   - Frontend checks for updates every 30 minutes automatically
+   - Manual check via "Check for Updates" button in UI
+4. **GitHub Integration**: Queries `https://api.github.com/repos/Soul-Returns/proxy/releases` for latest version
+5. **Update Instructions**: Release descriptions on GitHub should contain update instructions (markdown formatted)
+
+### Creating Releases
+When creating a new release on GitHub:
+1. Tag format: `v1.0.0` (semantic versioning)
+2. Mark as pre-release if applicable (affects update channel filtering)
+3. Include update instructions in the release description:
+   ```markdown
+   ## Update Instructions
+   
+   ### Windows
+   1. Stop the running agent (right-click tray icon → Exit)
+   2. Download the new version from DevProxy UI → Host Agent tab
+   3. Replace the old executable
+   4. Run as administrator
+   
+   ### Linux
+   1. Stop the agent: `sudo killall devproxy-agent`
+   2. Download new version: `curl -O http://localhost:8090/api/agent/download/linux`
+   3. Replace: `sudo mv devproxy-agent /usr/local/bin/`
+   4. Restart: `sudo devproxy-agent`
+   ```
