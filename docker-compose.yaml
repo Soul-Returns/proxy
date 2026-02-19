@@ -19,8 +19,8 @@ services:
     # Go API backend
     api:
         build:
-            context: ./backend
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: backend/Dockerfile
         restart: unless-stopped
         ports:
             - "8090:8080"

@@ -13,6 +13,9 @@
       <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">
         Routes
       </button>
+      <button :class="['tab', { active: currentTab === 'agent' }]" @click="currentTab = 'agent'">
+        Host Agent
+      </button>
       <button :class="['tab', { active: currentTab === 'docs' }]" @click="currentTab = 'docs'">
         Documentation
       </button>
@@ -34,6 +37,9 @@
         @show-docs="currentTab = 'docs'"
       />
     </div>
+
+    <!-- Host Agent Tab -->
+    <AgentTab v-show="currentTab === 'agent'" />
 
     <!-- Documentation Tab -->
     <DocsTab v-show="currentTab === 'docs'" />
@@ -74,6 +80,7 @@ import AppHeader from './components/AppHeader.vue'
 import RouteForm from './components/RouteForm.vue'
 import RouteTable from './components/RouteTable.vue'
 import DocsTab from './components/DocsTab.vue'
+import AgentTab from './components/AgentTab.vue'
 import ToastNotification from './components/ToastNotification.vue'
 import EditRouteModal from './components/modals/EditRouteModal.vue'
 import HealthModal from './components/modals/HealthModal.vue'
@@ -86,6 +93,7 @@ export default {
     RouteForm,
     RouteTable,
     DocsTab,
+    AgentTab,
     ToastNotification,
     EditRouteModal,
     HealthModal,

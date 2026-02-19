@@ -3,13 +3,37 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY backend/frontend/package.json backend/frontend/package-lock.json* ./
 RUN npm install
 
-COPY frontend/ ./
+COPY backend/frontend/ ./
 RUN npm run build
 
-# Stage 2: Build Go backend
+# Stage 2: Build Host Agent (cross-compiled for Windows and Linux)
+FROM golang:1.22-alpine AS agent-builder
+
+WORKDIR /agent
+
+# Copy agent source
+COPY agent/go.mod ./
+COPY agent/*.go ./
+COPY agent/config/ ./config/
+COPY agent/hosts/ ./hosts/
+COPY agent/sync/ ./sync/
+COPY agent/autostart/ ./autostart/
+COPY agent/gui/ ./gui/
+COPY agent/tray/ ./tray/
+
+# Download dependencies
+RUN go mod tidy && go mod download
+
+# Build for Windows (amd64)
+RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -o devproxy-agent.exe .
+
+# Build for Linux (amd64)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o devproxy-agent .
+
+# Stage 3: Build Go backend
 FROM golang:1.22-alpine AS backend-builder
 
 WORKDIR /build
@@ -18,11 +42,11 @@ WORKDIR /build
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
 # Copy go mod files
-COPY go.mod go.sum* ./
+COPY backend/go.mod backend/go.sum* ./
 
 # Copy source code (needed for go mod tidy)
-COPY *.go ./
-COPY internal/ ./internal/
+COPY backend/*.go ./
+COPY backend/internal/ ./internal/
 
 # Create frontend dist placeholder for embedding
 RUN mkdir -p frontend/dist && touch frontend/dist/.gitkeep
@@ -44,6 +68,10 @@ WORKDIR /app
 RUN apk add --no-cache sqlite-libs ca-certificates
 
 COPY --from=backend-builder /build/devproxy-api /app/
+
+# Copy agent binaries for download
+COPY --from=agent-builder /agent/devproxy-agent.exe /app/agent/
+COPY --from=agent-builder /agent/devproxy-agent /app/agent/
 
 # Create data directory
 RUN mkdir -p /app/data

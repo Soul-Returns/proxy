@@ -76,6 +76,10 @@ func setupRoutes(r *gin.Engine) {
 		// Config import/export
 		api.GET("/export", handlers.ExportConfig)
 		api.POST("/import", handlers.ImportConfig)
+
+		// Host Agent
+		api.GET("/agent/info", handlers.GetAgentInfo)
+		api.GET("/agent/download/:os", handlers.DownloadAgent)
 	}
 }
 

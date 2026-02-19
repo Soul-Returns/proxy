@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevProxy Agent</title>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-input: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #475569;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5;
+    }
+    .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+    .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+    .card {
+      background: var(--bg-card); border-radius: 0.75rem;
+      padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .status-bar {
+      display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+    }
+    .status-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; flex-shrink: 0;
+    }
+    .dot-green { background: var(--success); }
+    .dot-red { background: var(--danger); }
+    .dot-yellow { background: var(--warning); }
+    .dot-gray { background: var(--text-muted); }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 0.5rem 1rem; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 0.5rem;
+      color: var(--text); font-size: 0.875rem;
+    }
+    input:focus { outline: none; border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .btn {
+      padding: 0.5rem 1.5rem; border: none; border-radius: 0.5rem;
+      font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
+    .btn-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .toggle-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.75rem 0; border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg-input); border-radius: 24px; transition: 0.2s;
+    }
+    .toggle-slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px;
+      left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--success); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .entries-list {
+      font-family: monospace; font-size: 0.8rem; color: var(--text-muted);
+      background: var(--bg); padding: 1rem; border-radius: 0.5rem;
+      max-height: 200px; overflow-y: auto;
+    }
+    .entries-list .entry { padding: 0.25rem 0; }
+    .entries-list .empty { color: var(--text-muted); font-style: italic; }
+    .backup-list { max-height: 200px; overflow-y: auto; }
+    .backup-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .backup-item:last-child { border-bottom: none; }
+    .backup-name { font-family: monospace; color: var(--text-muted); }
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; }
+    .success-msg { color: var(--success); font-size: 0.8rem; margin-top: 0.5rem; }
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem;
+      background: var(--bg-card); border: 1px solid var(--success);
+      border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 200; display: none; font-size: 0.875rem;
+    }
+    .toast.error { border-color: var(--danger); }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DevProxy Agent</h1>
+    <p class="subtitle">Automatic hosts file management</p>
+
+    <!-- Status Card -->
+    <div class="card">
+      <h2>Status</h2>
+      <div class="status-bar" id="statusBar">
+        <div class="status-item">
+          <span class="dot dot-gray" id="connDot"></span>
+          <span id="connText">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span id="routeCount">0 routes</span>
+        </div>
+        <div class="status-item">
+          <span id="lastSync">Never synced</span>
+        </div>
+        <div class="status-item">
+          <span class="dot dot-gray" id="permDot"></span>
+          <span id="permText">Checking permissions...</span>
+        </div>
+      </div>
+      <div id="errorMsg" class="error-msg" style="display:none;"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="syncNow()">Sync Now</button>
+        <button class="btn btn-sm" id="pauseBtn" onclick="togglePause()" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);">Pause</button>
+      </div>
+    </div>
+
+    <!-- Current Entries -->
+    <div class="card">
+      <h2>Managed Hosts Entries</h2>
+      <div class="entries-list" id="entriesList">
+        <div class="empty">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Configuration Card -->
+    <div class="card">
+      <h2>Configuration</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>DevProxy API URL</label>
+          <input type="text" id="apiUrl" placeholder="http://localhost:8090">
+        </div>
+        <div class="form-group">
+          <label>Sync Interval (seconds)</label>
+          <input type="number" id="syncInterval" min="1" max="300" placeholder="5">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Max Backups</label>
+          <input type="number" id="maxBackups" min="1" max="100" placeholder="20">
+        </div>
+        <div class="form-group">
+          <label>GUI Port</label>
+          <input type="number" id="guiPort" min="1024" max="65535" placeholder="9099">
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <strong>Autostart</strong>
+          <div style="font-size:0.8rem;color:var(--text-muted);">Start agent automatically on login</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="autostart" onchange="toggleAutostart()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
+      </div>
+    </div>
+
+    <!-- Backups Card -->
+    <div class="card">
+      <h2>Hosts File Backups</h2>
+      <div class="backup-list" id="backupList">
+        <div class="empty" style="color:var(--text-muted);font-size:0.875rem;">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const BASE = '';
+
+    function showToast(msg, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => t.className = 'toast', 3000);
+    }
+
+    async function api(path, opts) {
+      const resp = await fetch(BASE + path, opts);
+      return resp.json();
+    }
+
+    async function loadStatus() {
+      try {
+        const s = await api('/api/status');
+        const connDot = document.getElementById('connDot');
+        const connText = document.getElementById('connText');
+        const permDot = document.getElementById('permDot');
+        const permText = document.getElementById('permText');
+        const errorMsg = document.getElementById('errorMsg');
+        const pauseBtn = document.getElementById('pauseBtn');
+
+        connDot.className = 'dot ' + (s.connected ? 'dot-green' : 'dot-red');
+        connText.textContent = s.connected ? 'Connected' : 'Disconnected';
+
+        permDot.className = 'dot ' + (s.has_permission ? 'dot-green' : 'dot-red');
+        permText.textContent = s.has_permission ? 'Has permission' : 'No permission';
+
+        document.getElementById('routeCount').textContent = s.route_count + ' routes';
+
+        if (s.last_sync && s.last_sync !== '0001-01-01T00:00:00Z') {
+          const d = new Date(s.last_sync);
+          document.getElementById('lastSync').textContent = 'Last sync: ' + d.toLocaleTimeString();
+        }
+
+        if (s.last_error) {
+          errorMsg.textContent = s.last_error;
+          errorMsg.style.display = 'block';
+        } else {
+          errorMsg.style.display = 'none';
+        }
+
+        pauseBtn.textContent = s.paused ? 'Resume' : 'Pause';
+      } catch (e) {
+        document.getElementById('connDot').className = 'dot dot-red';
+        document.getElementById('connText').textContent = 'Agent not running';
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const c = await api('/api/config');
+        document.getElementById('apiUrl').value = c.api_url;
+        document.getElementById('syncInterval').value = c.sync_interval_seconds;
+        document.getElementById('maxBackups').value = c.max_backups;
+        document.getElementById('guiPort').value = c.gui_port;
+        document.getElementById('autostart').checked = c.autostart;
+      } catch (e) {}
+    }
+
+    async function saveConfig() {
+      try {
+        const cfg = {
+          api_url: document.getElementById('apiUrl').value,
+          sync_interval_seconds: parseInt(document.getElementById('syncInterval').value) || 5,
+          max_backups: parseInt(document.getElementById('maxBackups').value) || 20,
+          gui_port: parseInt(document.getElementById('guiPort').value) || 9099,
+          autostart: document.getElementById('autostart').checked,
+          run_in_background: true,
+        };
+        await api('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        showToast('Configuration saved');
+      } catch (e) {
+        showToast('Failed to save: ' + e.message, true);
+      }
+    }
+
+    async function toggleAutostart() {
+      // Handled by saveConfig
+    }
+
+    async function syncNow() {
+      try {
+        await api('/api/sync', { method: 'POST' });
+        showToast('Sync triggered');
+        setTimeout(loadStatus, 500);
+        setTimeout(loadEntries, 500);
+      } catch (e) {
+        showToast('Sync failed: ' + e.message, true);
+      }
+    }
+
+    async function togglePause() {
+      try {
+        await api('/api/pause', { method: 'POST' });
+        setTimeout(loadStatus, 200);
+      } catch (e) {
+        showToast('Failed: ' + e.message, true);
+      }
+    }
+
+    async function loadEntries() {
+      try {
+        const data = await api('/api/entries');
+        const list = document.getElementById('entriesList');
+        if (!data.entries || data.entries.length === 0) {
+          list.innerHTML = '<div class="empty">No managed entries</div>';
+        } else {
+          list.innerHTML = data.entries.map(e => '<div class="entry">' + escHtml(e) + '</div>').join('');
+        }
+      } catch (e) {
+        document.getElementById('entriesList').innerHTML = '<div class="empty">Failed to load</div>';
+      }
+    }
+
+    async function loadBackups() {
+      try {
+        const data = await api('/api/backups');
+        const list = document.getElementById('backupList');
+        if (!data.backups || data.backups.length === 0) {
+          list.innerHTML = '<div style="color:var(--text-muted);font-size:0.875rem;padding:0.5rem 0;">No backups yet</div>';
+        } else {
+          list.innerHTML = data.backups.map(b =>
+            '<div class="backup-item">' +
+            '<span class="backup-name">' + escHtml(b.name) + '</span>' +
+            '<button class="btn btn-sm" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);" ' +
+            'onclick="restoreBackup(\'' + escAttr(b.path) + '\')">Restore</button>' +
+            '</div>'
+          ).join('');
+        }
+      } catch (e) {
+        document.getElementById('backupList').innerHTML = '<div style="color:var(--text-muted);font-size:0.875rem;">Failed to load backups</div>';
+      }
+    }
+
+    async function restoreBackup(path) {
+      if (!confirm('Restore hosts file from this backup? A backup of the current file will be created first.')) return;
+      try {
+        await api('/api/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: path })
+        });
+        showToast('Backup restored');
+        loadEntries();
+        loadBackups();
+      } catch (e) {
+        showToast('Restore failed: ' + e.message, true);
+      }
+    }
+
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escAttr(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+    // Initial load
+    loadStatus();
+    loadConfig();
+    loadEntries();
+    loadBackups();
+
+    // Poll status
+    setInterval(loadStatus, 3000);
+    setInterval(loadEntries, 10000);
+  </script>
+</body>
+</html>
