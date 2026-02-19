@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -50,11 +51,19 @@ func GenerateCaddyfile() error {
 		sb.WriteString("}\n\n")
 	}
 
+	// Ensure directory exists
+	dir := filepath.Dir(caddyfilePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("Error creating directory: %v", err)
+		return err
+	}
+
 	if err := os.WriteFile(caddyfilePath, []byte(sb.String()), 0644); err != nil {
 		log.Printf("Error writing Caddyfile: %v", err)
 		return err
 	}
 
+	log.Println("Caddyfile generated successfully")
 	return nil
 }
 
