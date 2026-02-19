@@ -106,10 +106,17 @@
     }
     .toast.error { border-color: var(--danger); }
     .toast.show { display: block; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      color: var(--primary); text-decoration: none; font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    .back-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="container">
+    <a href="http://localhost:8090" class="back-link">← Back to DevProxy</a>
     <h1>DevProxy Agent</h1>
     <p class="subtitle">Automatic hosts file management</p>
 

@@ -1,6 +1,6 @@
 <template>
   <div class="docs">
-    <!-- Status Card -->
+    <!-- Overview Card -->
     <div class="card">
       <h2>🖥️ Host Agent</h2>
       <div class="docs-section">
@@ -87,24 +87,10 @@ sudo mv devproxy-agent /usr/local/bin/</pre>
       </div>
     </div>
 
-    <!-- Agent Config Card -->
+    <!-- How It Works Card -->
     <div class="card">
-      <h2>⚙️ Agent Configuration</h2>
+      <h2>🔧 How It Works</h2>
       <div class="docs-section">
-        <p>The agent has a built-in web configuration panel where you can adjust settings,
-           view sync status, manage backups, and more.</p>
-        <div style="margin-top: 1rem;">
-          <a href="http://localhost:9099" target="_blank" class="config-link">
-            Open Agent Config Panel →
-          </a>
-        </div>
-        <p class="hint" style="margin-top: 0.75rem;">
-          ℹ️ The config panel is only available when the agent is running on your machine.
-          Default address: <code>http://localhost:9099</code>
-        </p>
-      </div>
-      <div class="docs-section">
-        <h3>How It Works</h3>
         <pre class="architecture-diagram">┌─────────────────────┐        ┌──────────────────────┐
 │  DevProxy (Docker)  │        │  Your Machine        │
 │                     │        │                      │
@@ -182,19 +168,4 @@ export default {
   font-family: monospace;
 }
 
-.config-link {
-  display: inline-block;
-  padding: 0.5rem 1.5rem;
-  background: var(--primary);
-  color: white;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background 0.15s;
-}
-
-.config-link:hover {
-  background: var(--primary-hover);
-  text-decoration: none;
-}
 </style>

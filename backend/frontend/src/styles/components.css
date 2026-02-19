@@ -337,8 +337,36 @@ input[type="text"]::placeholder {
 
 .tabs {
   display: flex;
-  gap: var(--space-sm);
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--space-lg);
+}
+
+.tabs-left {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.agent-config-btn {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.agent-config-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.agent-config-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .tab {

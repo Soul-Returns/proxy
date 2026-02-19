@@ -10,14 +10,24 @@
 
     <!-- Navigation Tabs -->
     <div class="tabs">
-      <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">
-        Routes
-      </button>
-      <button :class="['tab', { active: currentTab === 'agent' }]" @click="currentTab = 'agent'">
-        Host Agent
-      </button>
-      <button :class="['tab', { active: currentTab === 'docs' }]" @click="currentTab = 'docs'">
-        Documentation
+      <div class="tabs-left">
+        <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">
+          Routes
+        </button>
+        <button :class="['tab', { active: currentTab === 'agent' }]" @click="currentTab = 'agent'">
+          Host Agent
+        </button>
+        <button :class="['tab', { active: currentTab === 'docs' }]" @click="currentTab = 'docs'">
+          Documentation
+        </button>
+      </div>
+      <button
+        class="agent-config-btn"
+        :disabled="!agentReachable"
+        :title="agentReachable ? 'Open Agent Config Panel' : 'Agent is not running'"
+        @click="openAgentConfig"
+      >
+        ⚙️ Agent Config
       </button>
     </div>
 
@@ -143,9 +153,33 @@ export default {
       currentTab: 'routes',
       editingRoute: null,
       healthDetails: null,
+      agentReachable: false,
     }
   },
+  mounted() {
+    this.checkAgent()
+    this._agentInterval = setInterval(() => this.checkAgent(), 5000)
+  },
+  beforeUnmount() {
+    if (this._agentInterval) clearInterval(this._agentInterval)
+  },
   methods: {
+    async checkAgent() {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 2000)
+        const resp = await fetch('http://localhost:9099/api/status', { signal: controller.signal })
+        clearTimeout(timeout)
+        this.agentReachable = resp.ok
+      } catch {
+        this.agentReachable = false
+      }
+    },
+    openAgentConfig() {
+      if (this.agentReachable) {
+        window.location.href = 'http://localhost:9099'
+      }
+    },
     async handleAddRoute(route) {
       await this.createRoute(route)
     },

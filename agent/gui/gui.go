@@ -32,14 +32,14 @@ func Start(port int) {
 		w.Write(data)
 	})
 
-	// API endpoints
-	mux.HandleFunc("/api/status", handleStatus)
-	mux.HandleFunc("/api/config", handleConfig)
-	mux.HandleFunc("/api/sync", handleSync)
-	mux.HandleFunc("/api/pause", handlePause)
-	mux.HandleFunc("/api/entries", handleEntries)
-	mux.HandleFunc("/api/backups", handleBackups)
-	mux.HandleFunc("/api/restore", handleRestore)
+	// API endpoints (with CORS for DevProxy WebUI)
+	mux.HandleFunc("/api/status", cors(handleStatus))
+	mux.HandleFunc("/api/config", cors(handleConfig))
+	mux.HandleFunc("/api/sync", cors(handleSync))
+	mux.HandleFunc("/api/pause", cors(handlePause))
+	mux.HandleFunc("/api/entries", cors(handleEntries))
+	mux.HandleFunc("/api/backups", cors(handleBackups))
+	mux.HandleFunc("/api/restore", cors(handleRestore))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	log.Printf("Agent config GUI available at http://%s", addr)
@@ -162,6 +162,19 @@ func handleRestore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"message": "restored"})
+}
+
+func cors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
