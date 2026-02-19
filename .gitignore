@@ -1,0 +1,22 @@
+# Data files
+data/*.db
+data/*.db-journal
+
+# Node modules (built in Docker)
+node_modules/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
