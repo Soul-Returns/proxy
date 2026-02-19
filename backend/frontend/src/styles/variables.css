@@ -1,0 +1,57 @@
+/**
+ * CSS Custom Properties (Variables)
+ * Design tokens for DevProxy UI
+ */
+
+:root {
+  /* Colors - Primary */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+
+  /* Colors - Semantic */
+  --success: #22c55e;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --warning: #f59e0b;
+
+  /* Colors - Background */
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-input: #334155;
+
+  /* Colors - Text */
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+
+  /* Colors - Border */
+  --border: #475569;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+
+  /* Z-index layers */
+  --z-modal: 100;
+  --z-toast: 200;
+}

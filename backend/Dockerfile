@@ -17,11 +17,12 @@ WORKDIR /build
 # Install dependencies
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
-# Copy go mod file
-COPY go.mod ./
+# Copy go mod files
+COPY go.mod go.sum* ./
 
-# Copy source code first (needed for go mod tidy)
+# Copy source code (needed for go mod tidy)
 COPY *.go ./
+COPY internal/ ./internal/
 
 # Create frontend dist placeholder for embedding
 RUN mkdir -p frontend/dist && touch frontend/dist/.gitkeep

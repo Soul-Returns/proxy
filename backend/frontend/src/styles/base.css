@@ -1,0 +1,62 @@
+/**
+ * Base styles - Reset and Typography
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--space-sm);
+}
+
+h2 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-md);
+}
+
+h3 {
+  font-size: var(--font-size-md);
+  margin-bottom: var(--space-sm);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  background: var(--bg-input);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85em;
+}
+
+pre {
+  background: var(--bg);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  font-size: var(--font-size-xs);
+  margin: var(--space-sm) 0;
+}
+
+/* Utility classes */
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-muted { color: var(--text-muted); }

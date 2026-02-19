@@ -1,0 +1,261 @@
+/**
+ * Layout styles - Container, Header, Cards, Modals, Toast
+ */
+
+/* ==========================================================================
+   Container & Header
+   ========================================================================== */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-xl);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin-bottom: var(--space-xl);
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   Modals
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+/* Health Modal */
+.health-modal {
+  max-width: 600px;
+}
+
+.health-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.health-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.health-row:last-child {
+  border-bottom: none;
+}
+
+.health-label {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  min-width: 120px;
+}
+
+.health-row code {
+  max-width: 350px;
+  word-break: break-all;
+}
+
+.error-row {
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.error-message {
+  color: var(--danger);
+  width: 100%;
+  max-width: 100%;
+}
+
+.error-type {
+  color: var(--warning);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: var(--font-size-xs);
+}
+
+.health-tip {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+/* Loading Modal */
+.loading-modal {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.loading-modal p {
+  margin-top: var(--space-md);
+  color: var(--text-muted);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
+
+.toast {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: var(--z-toast);
+}
+
+.toast-success {
+  border-color: var(--success);
+}
+
+.toast-error {
+  border-color: var(--danger);
+}
+
+/* ==========================================================================
+   Documentation
+   ========================================================================== */
+
+.docs-section {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.docs-section p {
+  margin-bottom: var(--space-sm);
+}
+
+.docs-section ul,
+.docs-section ol {
+  margin: var(--space-sm) 0;
+  padding-left: var(--space-lg);
+}
+
+.docs-section li {
+  margin-bottom: var(--space-xs);
+}
+
+.docs-section dl {
+  margin: 0;
+}
+
+.docs-section dt {
+  font-weight: 600;
+  margin-top: var(--space-sm);
+}
+
+.docs-section dd {
+  margin-left: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.architecture-diagram {
+  font-family: monospace;
+  line-height: 1.2;
+  font-size: var(--font-size-xs);
+}
+
+.domain-link {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.domain-link:hover {
+  text-decoration: underline;
+}

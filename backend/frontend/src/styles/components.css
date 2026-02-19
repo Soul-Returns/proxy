@@ -1,0 +1,329 @@
+/**
+ * Component styles - Buttons, Forms, Tables, Badges
+ */
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.btn {
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+.btn-sm {
+  padding: var(--space-sm) var(--space-sm);
+  font-size: var(--font-size-xs);
+}
+
+.btn-icon {
+  padding: var(--space-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.btn-apply {
+  background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
+  color: #000;
+  font-weight: 600;
+  animation: pulse-apply 2s infinite;
+}
+
+.btn-apply:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24 0%, #fb923c 100%);
+}
+
+.btn-apply:disabled {
+  animation: none;
+}
+
+@keyframes pulse-apply {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.form-group {
+  margin-bottom: var(--space-md);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+}
+
+label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+input[type="text"]::placeholder {
+  color: var(--text-muted);
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.hint-inline {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+}
+
+.field-hint {
+  display: block;
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.field-hint code {
+  font-size: 0.7rem;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.routes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.routes-table th,
+.routes-table td {
+  padding: var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.routes-table th {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.routes-table tr:last-child td {
+  border-bottom: none;
+}
+
+.name-cell {
+  position: relative;
+}
+
+.target-text {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* ==========================================================================
+   Status Badges
+   ========================================================================== */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.status-badge:hover {
+  opacity: 0.8;
+}
+
+.status-healthy {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+}
+
+.status-unhealthy {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.status-unknown {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Toggle Switch
+   ========================================================================== */
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-input);
+  border-radius: 24px;
+  transition: var(--transition-normal);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: var(--transition-normal);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--success);
+}
+
+.toggle input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* ==========================================================================
+   Change Indicator
+   ========================================================================== */
+
+.change-indicator {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-xs);
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0);
+    transform: scale(1.1);
+  }
+}
+
+/* ==========================================================================
+   Tabs
+   ========================================================================== */
+
+.tabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.tab {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.tab:hover {
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}

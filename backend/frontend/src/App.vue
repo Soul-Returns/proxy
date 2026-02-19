@@ -1,417 +1,162 @@
 <template>
   <div class="container">
-    <div class="header">
-      <div>
-        <h1>DevProxy</h1>
-        <p class="subtitle">Manage your local development proxy routes</p>
-      </div>
-      <div class="header-actions">
-        <button v-if="hasUnappliedChanges" class="btn btn-apply" @click="reloadProxy" :disabled="reloading">
-          ⚡ Apply Changes
-        </button>
-        <button class="btn btn-icon" @click="reloadProxy" title="Reload Caddy proxy" :disabled="reloading">🔄</button>
-        <button class="btn btn-icon" @click="exportConfig" title="Export configuration">⬇️</button>
-        <label class="btn btn-icon" title="Import configuration">
-          ⬆️
-          <input type="file" accept=".json" @change="importConfig" style="display: none;">
-        </label>
-      </div>
-    </div>
+    <AppHeader
+      :has-changes="hasUnappliedChanges"
+      :reloading="reloading"
+      @reload="reloadProxy"
+      @export="exportConfig"
+      @import="importConfig"
+    />
 
     <!-- Navigation Tabs -->
     <div class="tabs">
-      <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">Routes</button>
-      <button :class="['tab', { active: currentTab === 'docs' }]" @click="currentTab = 'docs'">Documentation</button>
+      <button :class="['tab', { active: currentTab === 'routes' }]" @click="currentTab = 'routes'">
+        Routes
+      </button>
+      <button :class="['tab', { active: currentTab === 'docs' }]" @click="currentTab = 'docs'">
+        Documentation
+      </button>
     </div>
 
     <!-- Routes Tab -->
     <div v-show="currentTab === 'routes'">
-      <div class="card">
-        <h2>Add New Route</h2>
-        <form @submit.prevent="addRoute">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Name <span class="hint-inline">Display name</span></label>
-              <input type="text" v-model="newRoute.name" placeholder="My Symfony App" required>
-            </div>
-            <div class="form-group">
-              <label>Domain <span class="hint-inline">Add to hosts file</span></label>
-              <input type="text" v-model="newRoute.domain" placeholder="myapp.test" required>
-            </div>
-            <div class="form-group">
-              <label>Target <span class="hint-inline">container:port</span></label>
-              <input type="text" v-model="newRoute.target" placeholder="myapp-nginx-1:80" required>
-              <span class="field-hint">💡 Run <code>docker compose ps</code> to find container names</span>
-            </div>
-          </div>
-          <div class="form-row" style="align-items: flex-end;">
-            <div class="checkbox-group">
-              <input type="checkbox" id="enabled" v-model="newRoute.enabled">
-              <label for="enabled" style="margin: 0;">Enable immediately</label>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Route</button>
-          </div>
-        </form>
-      </div>
-
-      <div class="card">
-        <h2>Proxy Routes</h2>
-        <div v-if="routes.length === 0" class="empty-state">
-          <p>No routes configured yet.</p>
-          <p class="hint">Check the <a href="#" @click.prevent="currentTab = 'docs'">Documentation</a> tab for setup instructions.</p>
-        </div>
-        <table v-else class="routes-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Domain</th>
-              <th>Target</th>
-              <th>Status</th>
-              <th>Enabled</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="route in routes" :key="route.id">
-              <td class="name-cell">
-                <span class="change-indicator" v-if="isRouteChanged(route.id)"></span>
-                {{ route.name }}
-              </td>
-              <td><a :href="'http://' + route.domain" target="_blank" class="domain-link">{{ route.domain }}</a></td>
-              <td class="target-text">{{ route.target }}</td>
-              <td>
-                <button :class="['status-badge', getHealthClass(route.id)]" @click="showHealthDetails(route.id)" :title="getHealthTooltip(route.id)">
-                  {{ getHealthText(route.id) }}
-                </button>
-              </td>
-              <td>
-                <label class="toggle">
-                  <input type="checkbox" :checked="route.enabled" @change="toggleRoute(route)">
-                  <span class="toggle-slider"></span>
-                </label>
-              </td>
-              <td>
-                <div class="actions">
-                  <button class="btn btn-icon btn-sm" @click="editRoute(route)" title="Edit">✏️</button>
-                  <button class="btn btn-icon btn-sm" @click="deleteRoute(route)" title="Delete">🗑️</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <RouteForm @submit="handleAddRoute" />
+      <RouteTable
+        :routes="routes"
+        :get-health-class="getHealthClass"
+        :get-health-text="getHealthText"
+        :get-health-tooltip="getHealthTooltip"
+        :is-changed="isRouteChanged"
+        @toggle="toggleRoute"
+        @edit="openEditModal"
+        @delete="handleDeleteRoute"
+        @show-health="openHealthModal"
+        @show-docs="currentTab = 'docs'"
+      />
     </div>
 
     <!-- Documentation Tab -->
-    <div v-show="currentTab === 'docs'" class="docs">
-      <div class="card">
-        <h2>🏗️ How DevProxy Works</h2>
-        <div class="docs-section">
-          <h3>Architecture</h3>
-          <pre class="architecture-diagram">┌──────────────────────────────────────────────┐
-│                  DevProxy                    │
-│  ┌────────────┐      ┌────────────┐          │
-│  │   Caddy    │      │  Go API    │          │
-│  │ (port 80)  │◄─────│ (port 8090)│          │
-│  │  reverse   │      │  config +  │          │
-│  │  proxy     │      │  web UI    │          │
-│  └─────┬──────┘      └─────┬──────┘          │
-│        │                   │                 │
-│        │             ┌─────┴─────┐           │
-│        │             │  SQLite   │           │
-│        │             │ (routes)  │           │
-│        │             └───────────┘           │
-└────────┼─────────────────────────────────────┘
-         │ dev-proxy network
-         ▼
-┌────────────────┐  ┌────────────────┐
-│ your-app:80    │  │ other-app:80   │
-│ (nginx/apache) │  │ (nginx/apache) │
-└────────────────┘  └────────────────┘</pre>
-        </div>
-        <div class="docs-section">
-          <h3>Key Components</h3>
-          <dl>
-            <dt>🔷 Caddy</dt>
-            <dd>Lightweight reverse proxy. Routes requests based on Host header to your containers.</dd>
-            <dt>🔷 Go API</dt>
-            <dd>Manages routes, generates Caddyfile, serves this UI. Stores data in SQLite.</dd>
-            <dt>🔷 dev-proxy Network</dt>
-            <dd>Docker bridge network allowing Caddy to reach your containers by name.</dd>
-          </dl>
-        </div>
-        <div class="docs-section">
-          <h3>Request Flow</h3>
-          <ol>
-            <li>Browser → <code>http://myapp.test</code></li>
-            <li>Hosts file → <code>127.0.0.1</code></li>
-            <li>Caddy receives request on port 80</li>
-            <li>Matches Host header → finds route</li>
-            <li>Proxies to <code>container:port</code></li>
-          </ol>
-        </div>
-      </div>
+    <DocsTab v-show="currentTab === 'docs'" />
 
-      <div class="card">
-        <h2>📋 Setup Guide</h2>
-        <div class="docs-section">
-          <h3>Step 1: Connect Your Project</h3>
-          <p>Create <code>docker-compose.override.yaml</code>:</p>
-          <pre>services:
-  nginx:  # your web service
-    networks:
-      - dev-proxy
-      - default
+    <!-- Modals -->
+    <EditRouteModal
+      v-if="editingRoute"
+      :route="editingRoute"
+      @close="editingRoute = null"
+      @save="handleSaveRoute"
+    />
 
-networks:
-  default:
-  dev-proxy:
-    external: true</pre>
-          <p class="hint">💡 Keep <code>default</code> network for internal communication (nginx↔php).</p>
-        </div>
-        <div class="docs-section">
-          <h3>Step 2: Find Container Name</h3>
-          <pre>cd your-project
-docker compose ps</pre>
-          <p>Use the NAME column (e.g., <code>myproject-nginx-1</code>).</p>
-        </div>
-        <div class="docs-section">
-          <h3>Step 3: Add Route</h3>
-          <ul>
-            <li><strong>Domain:</strong> <code>myproject.test</code></li>
-            <li><strong>Target:</strong> <code>myproject-nginx-1:80</code></li>
-          </ul>
-        </div>
-        <div class="docs-section">
-          <h3>Step 4: Update Hosts File</h3>
-          <p><strong>Windows:</strong> <code>C:\Windows\System32\drivers\etc\hosts</code> (run as Admin)</p>
-          <p><strong>Linux/Mac:</strong> <code>/etc/hosts</code></p>
-          <pre>127.0.0.1    myproject.test</pre>
-        </div>
-      </div>
+    <HealthModal
+      v-if="healthDetails"
+      :details="healthDetails"
+      @close="healthDetails = null"
+    />
 
-      <div class="card">
-        <h2>🔧 Troubleshooting</h2>
-        <div class="docs-section">
-          <h3>❌ DNS Failure / Container Not Found</h3>
-          <p><strong>Causes:</strong> Container not on dev-proxy network, not running, or wrong name.</p>
-          <pre>docker network inspect dev-proxy</pre>
-        </div>
-        <div class="docs-section">
-          <h3>❌ Connection Refused</h3>
-          <p><strong>Causes:</strong> Wrong port, or web server not running inside container.</p>
-          <pre>docker compose logs nginx</pre>
-        </div>
-        <div class="docs-section">
-          <h3>❌ ERR_EMPTY_RESPONSE</h3>
-          <p><strong>Causes:</strong> Domain not in hosts file, or Caddy not running.</p>
-          <pre>docker compose -f proxy/docker-compose.yaml logs caddy</pre>
-        </div>
-        <div class="docs-section">
-          <h3>Useful Commands</h3>
-          <pre># Check proxy network
-docker network inspect dev-proxy
+    <LoadingModal
+      v-if="reloading"
+      message="Reloading proxy configuration..."
+    />
 
-# Restart proxy
-cd proxy && docker compose restart
-
-# View Caddy config
-cat proxy/data/Caddyfile</pre>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div v-if="editingRoute" class="modal-overlay" @click.self="editingRoute = null">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Edit Route</h2>
-          <button class="btn btn-icon" @click="editingRoute = null">×</button>
-        </div>
-        <form @submit.prevent="saveRoute">
-          <div class="form-group"><label>Name</label><input type="text" v-model="editingRoute.name" required></div>
-          <div class="form-group"><label>Domain</label><input type="text" v-model="editingRoute.domain" required></div>
-          <div class="form-group"><label>Target</label><input type="text" v-model="editingRoute.target" required></div>
-          <div class="checkbox-group">
-            <input type="checkbox" id="edit-enabled" v-model="editingRoute.enabled">
-            <label for="edit-enabled" style="margin: 0;">Enabled</label>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-icon" @click="editingRoute = null">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Health Details Modal -->
-    <div v-if="healthDetails" class="modal-overlay" @click.self="healthDetails = null">
-      <div class="modal health-modal">
-        <div class="modal-header">
-          <h2>Health Details</h2>
-          <button class="btn btn-icon" @click="healthDetails = null">×</button>
-        </div>
-        <div class="health-details">
-          <div class="health-row"><span class="health-label">Status</span>
-            <span :class="['status-badge', healthDetails.healthy ? 'status-healthy' : 'status-unhealthy']">{{ healthDetails.healthy ? 'Healthy' : 'Unhealthy' }}</span>
-          </div>
-          <div class="health-row"><span class="health-label">Target</span><code>{{ healthDetails.target }}</code></div>
-          <div class="health-row"><span class="health-label">DNS Resolved</span>
-            <span :class="healthDetails.dns_resolved ? 'text-success' : 'text-danger'">{{ healthDetails.dns_resolved ? 'Yes' : 'No' }}</span>
-          </div>
-          <div v-if="healthDetails.resolved_ip" class="health-row"><span class="health-label">IP</span><code>{{ healthDetails.resolved_ip }}</code></div>
-          <div v-if="healthDetails.status_code" class="health-row"><span class="health-label">HTTP</span><span>{{ healthDetails.status_code }}</span></div>
-          <div v-if="healthDetails.response_time_ms" class="health-row"><span class="health-label">Response</span><span>{{ healthDetails.response_time_ms }}ms</span></div>
-          <div v-if="healthDetails.error_type" class="health-row"><span class="health-label">Error Type</span><span class="error-type">{{ healthDetails.error_type }}</span></div>
-          <div v-if="healthDetails.error" class="health-row error-row"><span class="health-label">Error</span><code class="error-message">{{ healthDetails.error }}</code></div>
-          <div v-if="healthDetails.tip" class="health-tip"><strong>💡 Tip:</strong> {{ healthDetails.tip }}</div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-primary" @click="healthDetails = null">Close</button></div>
-      </div>
-    </div>
-
-    <!-- Loading Modal -->
-    <div v-if="reloading" class="modal-overlay">
-      <div class="modal loading-modal">
-        <div class="loading-spinner"></div>
-        <p>Reloading proxy configuration...</p>
-      </div>
-    </div>
-
-    <div v-if="toast.show" :class="['toast', 'toast-' + toast.type]">{{ toast.message }}</div>
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+    />
   </div>
 </template>
 
 <script>
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useRoutes, useHealth, useProxy, useToast } from './composables'
+
+// Components
+import AppHeader from './components/AppHeader.vue'
+import RouteForm from './components/RouteForm.vue'
+import RouteTable from './components/RouteTable.vue'
+import DocsTab from './components/DocsTab.vue'
+import ToastNotification from './components/ToastNotification.vue'
+import EditRouteModal from './components/modals/EditRouteModal.vue'
+import HealthModal from './components/modals/HealthModal.vue'
+import LoadingModal from './components/modals/LoadingModal.vue'
+
 export default {
   name: 'App',
+  components: {
+    AppHeader,
+    RouteForm,
+    RouteTable,
+    DocsTab,
+    ToastNotification,
+    EditRouteModal,
+    HealthModal,
+    LoadingModal,
+  },
+  setup() {
+    const { routes, fetchRoutes, createRoute, updateRoute, deleteRoute, toggleRoute } = useRoutes()
+    const { getHealthClass, getHealthText, getHealthTooltip, getHealthDetails, startPolling, stopPolling } = useHealth()
+    const { reloading, hasUnappliedChanges, isRouteChanged, fetchAppliedState, reloadProxy, exportConfig, importConfig } = useProxy()
+    const { toast } = useToast()
+
+    onMounted(() => {
+      fetchRoutes()
+      fetchAppliedState()
+      startPolling()
+    })
+
+    onUnmounted(() => {
+      stopPolling()
+    })
+
+    return {
+      // State
+      routes,
+      reloading,
+      hasUnappliedChanges,
+      toast,
+
+      // Methods
+      fetchRoutes,
+      createRoute,
+      updateRoute,
+      deleteRoute,
+      toggleRoute,
+      getHealthClass,
+      getHealthText,
+      getHealthTooltip,
+      getHealthDetails,
+      isRouteChanged,
+      reloadProxy,
+      exportConfig,
+      importConfig,
+    }
+  },
   data() {
     return {
       currentTab: 'routes',
-      routes: [],
-      healthStatus: {},
-      newRoute: { name: '', domain: '', target: '', enabled: true },
       editingRoute: null,
       healthDetails: null,
-      reloading: false,
-      appliedState: [],
-      toast: { show: false, message: '', type: 'success' }
     }
-  },
-  computed: {
-    hasUnappliedChanges() {
-      return this.changedRouteIds.size > 0
-    },
-    changedRouteIds() {
-      const changed = new Set()
-      const appliedMap = new Map(this.appliedState.map(r => [r.id, r]))
-      
-      // Check for modified or new routes
-      for (const route of this.routes) {
-        const applied = appliedMap.get(route.id)
-        if (!applied) {
-          changed.add(route.id) // New route
-        } else if (
-          applied.name !== route.name ||
-          applied.domain !== route.domain ||
-          applied.target !== route.target ||
-          applied.enabled !== route.enabled
-        ) {
-          changed.add(route.id) // Modified route
-        }
-      }
-      
-      // Check for deleted routes (in applied but not in current)
-      const currentIds = new Set(this.routes.map(r => r.id))
-      for (const applied of this.appliedState) {
-        if (!currentIds.has(applied.id)) {
-          changed.add(applied.id) // Deleted route (mark with special ID)
-        }
-      }
-      
-      return changed
-    }
-  },
-  mounted() {
-    this.fetchRoutes()
-    this.fetchAppliedState()
-    this.fetchHealth()
-    setInterval(() => this.fetchHealth(), 30000)
   },
   methods: {
-    async fetchRoutes() {
-      try { this.routes = await (await fetch('/api/routes')).json() }
-      catch (e) { this.showToast('Failed to fetch routes', 'error') }
+    async handleAddRoute(route) {
+      await this.createRoute(route)
     },
-    async fetchHealth() {
-      try {
-        const statuses = await (await fetch('/api/health')).json()
-        this.healthStatus = {}
-        statuses.forEach(s => { this.healthStatus[s.route_id] = s })
-      } catch (e) { console.error(e) }
-    },
-    async fetchAppliedState() {
-      try { this.appliedState = await (await fetch('/api/applied-state')).json() }
-      catch (e) { console.error(e) }
-    },
-    isRouteChanged(id) {
-      return this.changedRouteIds.has(id)
-    },
-    async addRoute() {
-      try {
-        const res = await fetch('/api/routes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.newRoute) })
-        if (!res.ok) throw new Error('Failed')
-        this.newRoute = { name: '', domain: '', target: '', enabled: true }
-        await this.fetchRoutes()
-        this.showToast('Route added - click Apply Changes to update proxy', 'success')
-      } catch (e) { this.showToast(e.message, 'error') }
-    },
-    async toggleRoute(route) { await fetch(`/api/routes/${route.id}/toggle`, { method: 'POST' }); await this.fetchRoutes() },
-    editRoute(route) { this.editingRoute = { ...route } },
-    async saveRoute() {
-      await fetch(`/api/routes/${this.editingRoute.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.editingRoute) })
+    async handleSaveRoute(route) {
+      await this.updateRoute(route.id, route)
       this.editingRoute = null
-      await this.fetchRoutes()
-      this.showToast('Route updated - click Apply Changes to update proxy', 'success')
     },
-    async deleteRoute(route) {
-      if (!confirm(`Delete "${route.name}"?`)) return
-      await fetch(`/api/routes/${route.id}`, { method: 'DELETE' })
-      await this.fetchRoutes()
-      this.showToast('Route deleted - click Apply Changes to update proxy', 'success')
+    async handleDeleteRoute(route) {
+      await this.deleteRoute(route.id, route.name)
     },
-    getHealthClass(id) { const s = this.healthStatus[id]; return s ? (s.healthy ? 'status-healthy' : 'status-unhealthy') : 'status-unknown' },
-    getHealthText(id) { const s = this.healthStatus[id]; return s ? (s.healthy ? 'Healthy' : 'Unhealthy') : 'Checking...' },
-    getHealthTooltip(id) { const s = this.healthStatus[id]; return s ? (s.healthy ? `OK - ${s.response_time_ms}ms` : `${s.error_type}`) : 'Click for details' },
-    showHealthDetails(id) { if (this.healthStatus[id]) this.healthDetails = this.healthStatus[id] },
-    async exportConfig() {
-      const data = await (await fetch('/api/export')).json()
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
-      a.download = 'devproxy-config.json'
-      a.click()
+    openEditModal(route) {
+      this.editingRoute = { ...route }
     },
-    async importConfig(e) {
-      const file = e.target.files[0]; if (!file) return
-      await fetch('/api/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: await file.text() })
-      await this.fetchRoutes()
-      this.showToast('Imported', 'success')
-      e.target.value = ''
-    },
-    showToast(msg, type = 'success') { this.toast = { show: true, message: msg, type }; setTimeout(() => { this.toast.show = false }, 3000) },
-    async reloadProxy() {
-      this.reloading = true
-      try {
-        const res = await fetch('/api/reload', { method: 'POST' })
-        const data = await res.json()
-        await this.fetchAppliedState()
-        this.showToast(data.message || 'Proxy reloaded', 'success')
-        await this.fetchHealth()
-      } catch (e) {
-        this.showToast('Failed to reload proxy', 'error')
+    openHealthModal(id) {
+      const details = this.getHealthDetails(id)
+      if (details) {
+        this.healthDetails = details
       }
-      this.reloading = false
-    }
-  }
+    },
+  },
 }
 </script>
