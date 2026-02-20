@@ -13,6 +13,10 @@ Local reverse proxy with web UI for Docker Compose projects. Automatically manag
 - 📦 **Built-in Updates** — Check for updates and version info directly in the UI
 - 🔖 **Centralized Versioning** — Single VERSION file for backend and agent
 
+## Demo
+You can take a look and get an idea on how it works here:
+http://proxy.soulreturns.com/
+
 ## Quick Start
 
 ```bash
