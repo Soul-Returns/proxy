@@ -60,10 +60,19 @@ export const agentApi = {
   },
 }
 
+// Backend API
+export const backendApi = {
+  checkUpdates: (channel = null) => {
+    const body = channel ? JSON.stringify({ channel }) : undefined
+    return request('/updates/check', { method: 'POST', body })
+  },
+}
+
 export default {
   routes: routesApi,
   health: healthApi,
   proxy: proxyApi,
   config: configApi,
   agent: agentApi,
+  backend: backendApi,
 }

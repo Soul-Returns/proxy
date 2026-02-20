@@ -76,12 +76,25 @@
           <div v-show="showBackendInstructions" class="update-instructions">
           <h3>📋 Update Instructions</h3>
           <div class="instructions-box">
-            <p><strong>To update the DevProxy backend:</strong></p>
+            <p><strong>To update the DevProxy backend, choose one of the following methods:</strong></p>
+            
+            <h4>Method 1: Git Pull (Recommended)</h4>
             <ol>
               <li>Stop the running containers: <code>docker compose down</code></li>
-              <li>Update the VERSION file with the new version number</li>
+              <li>Pull the latest changes: <code>git pull origin main</code></li>
               <li>Rebuild and start: <code>docker compose up -d --build</code></li>
             </ol>
+            
+            <h4>Method 2: Download Release</h4>
+            <ol>
+              <li>Stop the running containers: <code>docker compose down</code></li>
+              <li>Backup your data directory: <code>cp -r data data.backup</code></li>
+              <li>Download the release ZIP from GitHub and extract it</li>
+              <li>Copy your persistent data back: <code>cp -r data.backup/* data/</code></li>
+              <li>Rebuild and start: <code>docker compose up -d --build</code></li>
+            </ol>
+            
+            <p class="note"><strong>Note:</strong> Your routes and settings are stored in the <code>data/</code> directory and will be preserved.</p>
           </div>
             <div class="release-notes" v-if="backendUpdateInfo && backendUpdateInfo.available && backendUpdateInfo.release && backendUpdateInfo.release.body">
               <h4>Release Notes:</h4>
@@ -98,35 +111,33 @@
       <div class="docs-section">
         <div class="version-display">
           <div class="version-row">
-            <span class="label">Current Version:</span>
+            <span class="label">Running Version:</span>
             <span class="value">
-              <code v-if="agentInfo && agentInfo.agent_version">v{{ agentInfo.agent_version }}</code>
-              <span v-else-if="agentRunningVersion">
+              <span v-if="agentRunningVersion">
                 <code>v{{ agentRunningVersion }}</code>
-                <span class="version-hint">(running)</span>
+                <span class="version-hint">(currently running on your machine)</span>
               </span>
-              <span v-else class="text-muted">Not installed</span>
+              <span v-else class="text-muted">Agent not running</span>
             </span>
           </div>
-          <div class="version-row" v-if="agentInfo && agentInfo.agent_version">
+          <div class="version-row">
             <span class="label">Newest Built:</span>
             <span class="value">
-              <code>v{{ agentInfo.agent_version }}</code>
-              <span class="version-hint">built with docker compose build</span>
+              <code v-if="agentInfo && agentInfo.agent_version">v{{ agentInfo.agent_version }}</code>
+              <span v-else class="loading">Loading...</span>
+              <span class="version-hint" v-if="agentInfo && agentInfo.agent_version">built with docker compose build</span>
             </span>
           </div>
-          <div class="version-row" v-if="agentUpdateInfo && agentUpdateInfo.latest_version">
-            <span class="label">Latest from GitHub:</span>
-            <span class="value"><code>v{{ agentUpdateInfo.latest_version }}</code></span>
-          </div>
-          <div class="version-row" v-if="agentUpdateInfo && agentUpdateInfo.checked_at">
-            <span class="label">Last Checked:</span>
-            <span class="value text-muted">{{ formatDate(agentUpdateInfo.checked_at) }}</span>
+          <div class="version-row" v-if="agentRunningVersion && agentInfo && agentInfo.agent_version && agentRunningVersion !== agentInfo.agent_version">
+            <span class="label"></span>
+            <span class="value">
+              <span class="update-hint">💡 A newer version is available. Follow update instructions below.</span>
+            </span>
           </div>
         </div>
 
-        <div class="update-status" v-if="agentUpdateInfo">
-          <div v-if="agentUpdateInfo.available" class="status-badge update-available">
+        <div class="update-status" v-if="agentRunningVersion && agentInfo && agentInfo.agent_version">
+          <div v-if="agentRunningVersion !== agentInfo.agent_version" class="status-badge update-available">
             ⚠️ Update Available
           </div>
           <div v-else class="status-badge up-to-date">
@@ -134,31 +145,12 @@
           </div>
         </div>
 
-        <div class="button-group">
-          <button 
-            @click="checkAgentUpdates" 
-            :disabled="checkingAgent"
-            class="btn-secondary"
-          >
-            {{ checkingAgent ? 'Checking...' : '🔄 Check for Updates' }}
-          </button>
-          <a
-            v-if="agentUpdateInfo && agentUpdateInfo.available && agentUpdateInfo.release"
-            :href="agentUpdateInfo.release.html_url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-primary"
-          >
-            📦 View Release on GitHub
-          </a>
-          <button
-            v-else-if="agentUpdateInfo && !agentUpdateInfo.available"
-            disabled
-            class="btn-primary btn-disabled"
-            title="You are on the latest version"
-          >
-            ✅ You're Up to Date
-          </button>
+        <div class="info-box">
+          <p><strong>ℹ️ About Agent Updates:</strong></p>
+          <p>The Host Agent is built during <code>docker compose build</code> and embedded in the backend container. When you update the backend, a new agent binary is automatically built.</p>
+          <p v-if="agentRunningVersion && agentInfo && agentInfo.agent_version && agentRunningVersion !== agentInfo.agent_version">
+            You're running <code>v{{ agentRunningVersion }}</code>, but <code>v{{ agentInfo.agent_version }}</code> is available. Download and install the newer version to stay up to date.
+          </p>
         </div>
 
         <!-- Agent Update Instructions (Always Visible, Collapsible) -->
@@ -173,23 +165,19 @@
             <h4>Windows</h4>
             <ol>
               <li>Stop the running agent (right-click tray icon → Exit)</li>
-              <li>Download the new version from the <a href="#" @click.prevent="goToAgentTab">Host Agent tab</a></li>
+              <li>Download the latest version from the <a href="#" @click.prevent="goToAgentTab">Host Agent tab</a></li>
               <li>Replace the old executable with the new one</li>
               <li>Run as administrator</li>
             </ol>
             <h4>Linux</h4>
             <ol>
               <li>Stop the agent: <code>sudo killall devproxy-agent</code></li>
-              <li>Download new version: <code>curl -O http://localhost:8090/api/agent/download/linux</code></li>
-              <li>Replace: <code>sudo mv devproxy-agent-v{{ agentUpdateInfo && agentUpdateInfo.latest_version ? agentUpdateInfo.latest_version : 'X.X.X' }} /usr/local/bin/devproxy-agent</code></li>
+              <li>Download latest version: <code>curl -O http://localhost:8090/api/agent/download/linux</code></li>
+              <li>Replace: <code>sudo mv devproxy-agent /usr/local/bin/devproxy-agent</code></li>
               <li>Set permissions: <code>sudo chmod +x /usr/local/bin/devproxy-agent</code></li>
               <li>Restart: <code>sudo devproxy-agent</code></li>
             </ol>
           </div>
-            <div class="release-notes" v-if="agentUpdateInfo && agentUpdateInfo.available && agentUpdateInfo.release && agentUpdateInfo.release.body">
-              <h4>Release Notes:</h4>
-              <div class="notes-content" v-html="formatReleaseNotes(agentUpdateInfo.release.body)"></div>
-            </div>
           </div>
         </div>
       </div>
@@ -198,7 +186,7 @@
 </template>
 
 <script>
-import { agentApi } from '../api'
+import { agentApi, backendApi } from '../api'
 
 export default {
   name: 'UpdateTab',
@@ -208,9 +196,7 @@ export default {
       agentInfo: null,
       agentRunningVersion: null,
       backendUpdateInfo: null,
-      agentUpdateInfo: null,
       checkingBackend: false,
-      checkingAgent: false,
       showBackendInstructions: false,
       showAgentInstructions: false,
       backendUpdateChannel: 'release',
@@ -219,7 +205,6 @@ export default {
   mounted() {
     this.fetchVersions()
     this.checkBackendUpdates()
-    this.checkAgentUpdates()
   },
   methods: {
     async fetchVersions() {
@@ -234,12 +219,19 @@ export default {
         const agentData = await agentResp.json()
         this.agentInfo = agentData
 
-        // Try to get running agent version
+        // Try to get running agent version directly from agent (not through backend)
         try {
-          const runningAgentData = await agentApi.getVersion()
-          this.agentRunningVersion = runningAgentData.version
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 2000)
+          const resp = await fetch('http://localhost:9099/api/version', { signal: controller.signal })
+          clearTimeout(timeout)
+          if (resp.ok) {
+            const runningAgentData = await resp.json()
+            this.agentRunningVersion = runningAgentData.version
+          }
         } catch {
           // Agent not running
+          console.debug('Agent not running or not accessible')
         }
       } catch (error) {
         console.error('Failed to fetch versions:', error)
@@ -248,34 +240,23 @@ export default {
     async checkBackendUpdates() {
       this.checkingBackend = true
       try {
-        // Check updates for backend via agent (which checks GitHub) with selected channel
-        const data = await agentApi.checkUpdates(this.backendUpdateChannel)
+        // Check updates directly from backend (which checks GitHub) with selected channel
+        const data = await backendApi.checkUpdates(this.backendUpdateChannel)
         this.backendUpdateInfo = data
         
         // Show toast if up to date
-        if (data && !data.available) {
+        if (data && !data.available && !data.error) {
           this.showToast('✅ You\'re using the newest version', 'success')
         }
       } catch (error) {
         console.warn('Failed to check backend updates:', error)
+        this.backendUpdateInfo = {
+          current_version: this.backendVersion,
+          error: 'Failed to check for updates: ' + error.message,
+          checked_at: new Date().toISOString(),
+        }
       } finally {
         this.checkingBackend = false
-      }
-    },
-    async checkAgentUpdates() {
-      this.checkingAgent = true
-      try {
-        const data = await agentApi.checkUpdates()
-        this.agentUpdateInfo = data
-        
-        // Show toast if up to date
-        if (data && !data.available) {
-          this.showToast('✅ You\'re using the newest version', 'success')
-        }
-      } catch (error) {
-        console.warn('Failed to check agent updates:', error)
-      } finally {
-        this.checkingAgent = false
       }
     },
     onBackendChannelChange() {
@@ -502,6 +483,34 @@ export default {
   transition: transform 0.15s;
 }
 
+.info-box {
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.info-box p {
+  margin: 0.5rem 0;
+}
+
+.info-box code {
+  padding: 0.125rem 0.375rem;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.update-hint {
+  color: rgb(251, 146, 60);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
 .update-instructions {
   margin-top: 1.5rem;
   padding: 1.5rem;
@@ -534,6 +543,15 @@ export default {
 
 .instructions-box li {
   margin: 0.5rem 0;
+}
+
+.instructions-box .note {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid var(--primary);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
 }
 
 .instructions-box code {

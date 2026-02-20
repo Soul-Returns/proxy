@@ -83,8 +83,9 @@ func setupRoutes(r *gin.Engine) {
 		api.GET("/agent/version", handlers.GetAgentVersion)
 		api.POST("/agent/updates/check", handlers.CheckAgentUpdates)
 
-		// Version
+		// Version and Updates
 		api.GET("/version", handlers.GetBackendVersion)
+		api.POST("/updates/check", handlers.CheckBackendUpdates)
 	}
 }
 

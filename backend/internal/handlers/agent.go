@@ -19,15 +19,16 @@ const agentDir = "/app/agent"
 // DownloadAgent serves the agent binary for the specified OS.
 func DownloadAgent(c *gin.Context) {
 	osName := c.Param("os")
+	agentVersion := getAgentVersionFromFiles()
 
 	var filename, contentName string
 	switch osName {
 	case "windows":
 		filename = "devproxy-agent.exe"
-		contentName = "devproxy-agent.exe"
+		contentName = fmt.Sprintf("devproxy-agent-v%s.exe", agentVersion)
 	case "linux":
 		filename = "devproxy-agent"
-		contentName = "devproxy-agent"
+		contentName = fmt.Sprintf("devproxy-agent-v%s", agentVersion)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported OS. Use 'windows' or 'linux'."})
 		return
@@ -48,36 +49,28 @@ func GetAgentInfo(c *gin.Context) {
 	platforms := []gin.H{}
 	agentVersion := getAgentVersionFromFiles()
 
-	// Look for versioned executables
-	files, _ := filepath.Glob(filepath.Join(agentDir, "devproxy-agent*.exe"))
-	for _, file := range files {
-		info, _ := os.Stat(file)
-		filename := filepath.Base(file)
+	// Check for Windows agent
+	windowsFile := filepath.Join(agentDir, "devproxy-agent.exe")
+	if info, err := os.Stat(windowsFile); err == nil {
 		platforms = append(platforms, gin.H{
 			"os":       "windows",
-			"filename": filename,
+			"filename": fmt.Sprintf("devproxy-agent-v%s.exe", agentVersion),
 			"size":     info.Size(),
 			"url":      "/api/agent/download/windows",
 			"version":  agentVersion,
 		})
-		break // Use first match
 	}
 
-	files, _ = filepath.Glob(filepath.Join(agentDir, "devproxy-agent"))
-	for _, file := range files {
-		if strings.HasSuffix(file, ".exe") {
-			continue
-		}
-		info, _ := os.Stat(file)
-		filename := filepath.Base(file)
+	// Check for Linux agent
+	linuxFile := filepath.Join(agentDir, "devproxy-agent")
+	if info, err := os.Stat(linuxFile); err == nil {
 		platforms = append(platforms, gin.H{
 			"os":       "linux",
-			"filename": filename,
+			"filename": fmt.Sprintf("devproxy-agent-v%s", agentVersion),
 			"size":     info.Size(),
 			"url":      "/api/agent/download/linux",
 			"version":  agentVersion,
 		})
-		break
 	}
 
 	c.JSON(http.StatusOK, gin.H{
