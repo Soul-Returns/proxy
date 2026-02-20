@@ -116,7 +116,7 @@
 </head>
 <body>
   <div class="container">
-    <a href="http://localhost:8090" class="back-link">← Back to DevProxy</a>
+    <a href="#" id="backLink" class="back-link">← Back to DevProxy</a>
     <h1>DevProxy Agent</h1>
     <p class="subtitle">Automatic hosts file management</p>
 
@@ -263,6 +263,15 @@
         document.getElementById('maxBackups').value = c.max_backups;
         document.getElementById('guiPort').value = c.gui_port;
         document.getElementById('autostart').checked = c.autostart;
+        // Update back link with configured API URL
+        // Fallback: construct from current location if config doesn't have it
+        let backUrl = c.api_url || 'http://localhost:8090';
+        if (!c.api_url || c.api_url === 'http://localhost:8090') {
+          // If API URL is localhost, try to construct from current page location
+          const port = window.location.port === '9099' ? '8090' : '8090';
+          backUrl = window.location.protocol + '//' + window.location.hostname + ':' + port;
+        }
+        document.getElementById('backLink').href = backUrl;
       } catch (e) {}
     }
 
