@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 // Config holds application configuration
@@ -41,7 +42,12 @@ func GetAgentURL() string {
 	cfg := Get()
 	if cfg.IsRemote {
 		// For remote deployments, agent runs on same domain but different port
-		return "http://" + cfg.Domain + ":" + cfg.AgentPort
+		// Strip any existing port from domain
+		host := cfg.Domain
+		if idx := strings.LastIndex(host, ":"); idx != -1 {
+			host = host[:idx]
+		}
+		return "http://" + host + ":" + cfg.AgentPort
 	}
 	// For local deployments, agent is on localhost
 	return "http://localhost:" + cfg.AgentPort
