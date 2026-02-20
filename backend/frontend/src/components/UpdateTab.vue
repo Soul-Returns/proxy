@@ -172,7 +172,7 @@
             <h4>Linux</h4>
             <ol>
               <li>Stop the agent: <code>sudo killall devproxy-agent</code></li>
-              <li>Download latest version: <code>curl -O {{ window.location.origin }}/api/agent/download/linux</code></li>
+              <li>Download latest version: <code>curl -O http://localhost:8090/api/agent/download/linux</code></li>
               <li>Replace: <code>sudo mv devproxy-agent /usr/local/bin/devproxy-agent</code></li>
               <li>Set permissions: <code>sudo chmod +x /usr/local/bin/devproxy-agent</code></li>
               <li>Restart: <code>sudo devproxy-agent</code></li>
@@ -204,12 +204,20 @@ export default {
       agentUrl: '',
     }
   },
-  async mounted() {
-    this.agentUrl = await getAgentUrl()
-    this.fetchVersions()
-    this.checkBackendUpdates()
+  mounted() {
+    this.init()
   },
   methods: {
+    async init() {
+      try {
+        this.agentUrl = await getAgentUrl()
+      } catch (error) {
+        console.error('Failed to fetch config:', error)
+        this.agentUrl = 'http://localhost:9099' // fallback
+      }
+      this.fetchVersions()
+      this.checkBackendUpdates()
+    },
     async fetchVersions() {
       try {
         // Fetch backend version
