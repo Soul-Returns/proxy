@@ -15,7 +15,11 @@ Local reverse proxy with web UI for Docker Compose projects. Automatically manag
 
 ## Demo
 You can take a look and get an idea on how it works here:
-http://proxy.soulreturns.com/
+http://proxy.soulreturns.com:8090
+
+agent config reachable here: http://proxy.soulreturns.com:9099 (also reachable through the main gui on port 8090)
+
+``the agent does not have elevated priviliges for demo purposes``
 
 ## Quick Start
 
