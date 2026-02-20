@@ -190,8 +190,12 @@ export default {
         const resp = await fetch(`${agentUrl}/api/status`, { signal: controller.signal })
         clearTimeout(timeout)
         this.agentReachable = resp.ok
-      } catch {
+        if (resp.ok) {
+          console.debug('Agent is reachable at', agentUrl)
+        }
+      } catch (error) {
         this.agentReachable = false
+        console.debug('Agent not reachable:', error.message)
       }
     },
     async openAgentConfig() {

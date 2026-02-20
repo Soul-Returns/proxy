@@ -58,7 +58,10 @@ export function useProxy() {
     reloading.value = true
     try {
       const data = await proxyApi.reload()
+      // Small delay to ensure backend has updated applied state
+      await new Promise(resolve => setTimeout(resolve, 100))
       await fetchAppliedState()
+      await fetchRoutes()
       showToast(data.message || 'Proxy reloaded', 'success')
       await fetchHealth()
     } catch (e) {
