@@ -23,11 +23,15 @@ http://proxy.soulreturns.com/
 # 1. Create proxy network (once)
 docker network create dev-proxy
 
-# 2. Start DevProxy
+# 2. (Optional) Configure domain
+cp .env.example .env
+# Edit .env to set DOMAIN for remote deployments
+
+# 3. Start DevProxy
 cd proxy
 docker compose up -d --build
 
-# 3. Open UI
+# 4. Open UI
 http://localhost:8090
 ```
 
@@ -106,6 +110,30 @@ DevProxy includes a built-in **Updates** tab in the Web UI:
 - Versions stored in `VERSION` file at project root
 - Backend and agent versions managed together
 - Agent binaries include version in filename (e.g., `devproxy-agent-v1.0.0.exe`)
+
+## Domain Configuration
+
+DevProxy supports custom domain configuration for both local and remote deployments:
+
+**Local Development (default):**
+```bash
+DOMAIN=localhost:8090
+AGENT_PORT=9099
+```
+
+**Remote VPS Deployment:**
+```bash
+DOMAIN=proxy.yourdomain.com
+AGENT_PORT=9099
+```
+
+**Custom Local Domain:**
+```bash
+DOMAIN=proxy.test  # Add to your hosts file: 127.0.0.1 proxy.test
+AGENT_PORT=9099
+```
+
+Create a `.env` file from `.env.example` and set these values. The agent will be accessible at `http://DOMAIN:AGENT_PORT`.
 
 ## Ports
 

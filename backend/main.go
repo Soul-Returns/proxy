@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"devproxy/internal/config"
 	"devproxy/internal/database"
 	"devproxy/internal/handlers"
 	"devproxy/internal/services"
@@ -20,6 +21,9 @@ import (
 var staticFiles embed.FS
 
 func main() {
+	// Initialize configuration
+	config.Init()
+
 	// Configuration
 	dbPath := getEnv("DB_PATH", "/app/data/devproxy.db")
 	caddyfilePath := getEnv("CADDYFILE_PATH", "/app/data/Caddyfile")
@@ -86,6 +90,9 @@ func setupRoutes(r *gin.Engine) {
 		// Version and Updates
 		api.GET("/version", handlers.GetBackendVersion)
 		api.POST("/updates/check", handlers.CheckBackendUpdates)
+
+		// Frontend Config
+		api.GET("/config", gin.WrapF(handlers.GetFrontendConfig))
 	}
 }
 

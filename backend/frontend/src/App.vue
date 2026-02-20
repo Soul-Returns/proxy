@@ -105,6 +105,7 @@ import EditRouteModal from './components/modals/EditRouteModal.vue'
 import HealthModal from './components/modals/HealthModal.vue'
 import LoadingModal from './components/modals/LoadingModal.vue'
 import { agentApi } from './api'
+import { getAgentUrl } from './services/config'
 
 export default {
   name: 'App',
@@ -183,18 +184,20 @@ export default {
   methods: {
     async checkAgent() {
       try {
+        const agentUrl = await getAgentUrl()
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 2000)
-        const resp = await fetch('http://localhost:9099/api/status', { signal: controller.signal })
+        const resp = await fetch(`${agentUrl}/api/status`, { signal: controller.signal })
         clearTimeout(timeout)
         this.agentReachable = resp.ok
       } catch {
         this.agentReachable = false
       }
     },
-    openAgentConfig() {
+    async openAgentConfig() {
       if (this.agentReachable) {
-        window.location.href = 'http://localhost:9099'
+        const agentUrl = await getAgentUrl()
+        window.location.href = agentUrl
       }
     },
     async handleAddRoute(route) {

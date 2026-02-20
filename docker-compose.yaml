@@ -30,6 +30,8 @@ services:
             - DB_PATH=/app/data/devproxy.db
             - CADDYFILE_PATH=/app/data/Caddyfile
             - CADDY_API=http://caddy:2019
+            - DOMAIN=${DOMAIN:-localhost:8090}
+            - AGENT_PORT=${AGENT_PORT:-9099}
         networks:
             - internal
             - dev-proxy

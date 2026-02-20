@@ -172,7 +172,7 @@
             <h4>Linux</h4>
             <ol>
               <li>Stop the agent: <code>sudo killall devproxy-agent</code></li>
-              <li>Download latest version: <code>curl -O http://localhost:8090/api/agent/download/linux</code></li>
+              <li>Download latest version: <code>curl -O {{ window.location.origin }}/api/agent/download/linux</code></li>
               <li>Replace: <code>sudo mv devproxy-agent /usr/local/bin/devproxy-agent</code></li>
               <li>Set permissions: <code>sudo chmod +x /usr/local/bin/devproxy-agent</code></li>
               <li>Restart: <code>sudo devproxy-agent</code></li>
@@ -187,6 +187,7 @@
 
 <script>
 import { agentApi, backendApi } from '../api'
+import { getAgentUrl } from '../services/config'
 
 export default {
   name: 'UpdateTab',
@@ -200,9 +201,11 @@ export default {
       showBackendInstructions: false,
       showAgentInstructions: false,
       backendUpdateChannel: 'release',
+      agentUrl: '',
     }
   },
-  mounted() {
+  async mounted() {
+    this.agentUrl = await getAgentUrl()
     this.fetchVersions()
     this.checkBackendUpdates()
   },
@@ -221,9 +224,10 @@ export default {
 
         // Try to get running agent version directly from agent (not through backend)
         try {
+          const agentUrl = await getAgentUrl()
           const controller = new AbortController()
           const timeout = setTimeout(() => controller.abort(), 2000)
-          const resp = await fetch('http://localhost:9099/api/version', { signal: controller.signal })
+          const resp = await fetch(`${agentUrl}/api/version`, { signal: controller.signal })
           clearTimeout(timeout)
           if (resp.ok) {
             const runningAgentData = await resp.json()
