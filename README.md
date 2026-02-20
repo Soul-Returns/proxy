@@ -10,6 +10,8 @@ Local reverse proxy with web UI for Docker Compose projects. Automatically manag
 - 🔄 **Live Reload** — Changes apply instantly without restarting containers
 - 💾 **Persistent Routes** — Stored in SQLite, survives restarts
 - 🔍 **Health Checks** — Monitor upstream container status
+- 📦 **Built-in Updates** — Check for updates and version info directly in the UI
+- 🔖 **Centralized Versioning** — Single VERSION file for backend and agent
 
 ## Quick Start
 
@@ -44,10 +46,19 @@ networks:
 
 Restart: `docker compose up -d`
 
-## Add a Route
+## Web UI
+
+The Web UI at `http://localhost:8090` includes multiple tabs:
+
+- **Routes** — Manage your proxy routes, add/edit/delete domains
+- **Updates** — Check for updates, view version info, get update instructions
+- **Host Agent** — Download the agent, view documentation
+- **Documentation** — Quick reference and troubleshooting
+
+### Add a Route
 
 1. Find container name: `docker compose ps`
-2. In DevProxy UI → Add route:
+2. In DevProxy UI → Routes tab → Add route:
    - **Domain:** `myapp.test`
    - **Target:** `myproject-nginx-1:80`
 3. Access: `http://myapp.test`
@@ -77,6 +88,20 @@ Automatically syncs routes to your system's hosts file — no manual editing req
 - ✅ Safe backups before changes
 - ✅ System tray icon (Windows)
 - ✅ Autostart on login (optional)
+
+## Updates
+
+DevProxy includes a built-in **Updates** tab in the Web UI:
+
+- 🔍 **Version Checking** — Check for updates from GitHub releases
+- 📡 **Update Channels** — Choose between stable releases or pre-releases
+- 📝 **Update Instructions** — Step-by-step guide for backend and agent updates
+- 📊 **Version Status** — See current vs. latest versions at a glance
+
+**Version Management:**
+- Versions stored in `VERSION` file at project root
+- Backend and agent versions managed together
+- Agent binaries include version in filename (e.g., `devproxy-agent-v1.0.0.exe`)
 
 ## Ports
 

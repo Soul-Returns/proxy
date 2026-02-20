@@ -183,7 +183,7 @@ networks:
 - **Applied State**: The API tracks the last successfully applied Caddyfile configuration to detect pending changes in the UI.
 - **Hosts File Sync**: The agent uses a marker system to identify its managed entries, creates timestamped backups before each write, and prunes old backups.
 - **Embedded Frontend**: The Vue.js frontend is compiled and embedded into the Go binary using `//go:embed`, so the API serves a fully self-contained SPA.
-- **Versioning & Updates**: The agent includes built-in version checking against GitHub releases (https://github.com/Soul-Returns/proxy). Version is set at build time via ldflags. Users can select between "release" and "pre-release" update channels.
+- **Versioning & Updates**: Built-in Updates tab in the UI checks GitHub releases (https://github.com/Soul-Returns/proxy). Version is set at build time via ldflags from the centralized `VERSION` file. Users can select between "release" and "pre-release" update channels.
 
 ## Versioning and Updates
 
@@ -215,21 +215,23 @@ AGENT_VERSION=1.0.0
 
 ### Creating Releases
 When creating a new release on GitHub:
-1. Tag format: `v1.0.0` (semantic versioning)
-2. Mark as pre-release if applicable (affects update channel filtering)
-3. Include update instructions in the release description:
-   ```markdown
-   ## Update Instructions
-   
-   ### Windows
-   1. Stop the running agent (right-click tray icon → Exit)
-   2. Download the new version from DevProxy UI → Host Agent tab
-   3. Replace the old executable
-   4. Run as administrator
-   
-   ### Linux
-   1. Stop the agent: `sudo killall devproxy-agent`
-   2. Download new version: `curl -O http://localhost:8090/api/agent/download/linux`
-   3. Replace: `sudo mv devproxy-agent /usr/local/bin/`
-   4. Restart: `sudo devproxy-agent`
-   ```
+1. Update the `VERSION` file with new version numbers
+2. Create git tag: `v1.0.0` (semantic versioning)
+3. Mark as pre-release if applicable (affects update channel filtering)
+4. Use `RELEASE_TEMPLATE.md` for release description
+5. The Updates tab in the UI will automatically detect the new release
+
+### Updates Tab Features
+The Web UI includes a dedicated **Updates** tab with:
+- **Backend Updates**: Check for updates from GitHub, select release/pre-release channel
+- **Agent Updates**: Compare running version with newest built version
+- **Collapsible Instructions**: Always-visible update guides for both components
+- **Version Display**: Current version, latest from GitHub, last checked timestamp
+- **Status Badges**: Visual indicators for "Update Available" or "Up to Date"
+- **Toast Notifications**: "You're using the newest version" when up to date
+
+### Version Detection Flow
+- **Backend Version**: Read from `internal/version.Current` (set via ldflags)
+- **Agent Built Version**: Read from `/app/VERSION` file inside container
+- **Agent Running Version**: Direct fetch from `localhost:9099/api/version` (browser to host)
+- **GitHub Releases**: Backend queries GitHub API directly, filters by channel
