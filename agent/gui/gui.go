@@ -19,7 +19,10 @@ import (
 var staticFiles embed.FS
 
 // Start launches the config GUI web server.
-func Start(port int) {
+func Start(port int, bindAddr string) {
+	if bindAddr == "" {
+		bindAddr = "127.0.0.1" // Default to localhost
+	}
 	mux := http.NewServeMux()
 
 	// Serve the embedded HTML UI
@@ -44,8 +47,11 @@ func Start(port int) {
 	mux.HandleFunc("/api/version", cors(handleVersion))
 	mux.HandleFunc("/api/updates/check", cors(handleUpdateCheck))
 
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := fmt.Sprintf("%s:%d", bindAddr, port)
 	log.Printf("Agent config GUI available at http://%s", addr)
+	if bindAddr == "0.0.0.0" {
+		log.Printf("WARNING: GUI listening on all interfaces (0.0.0.0) - accessible from network")
+	}
 
 	go func() {
 		if err := http.ListenAndServe(addr, mux); err != nil {

@@ -16,6 +16,7 @@ type Config struct {
 	RunInBackground     bool   `json:"run_in_background"`
 	MaxBackups          int    `json:"max_backups"`
 	GUIPort             int    `json:"gui_port"`
+	GUIBindAddr         string `json:"gui_bind_addr"`  // Bind address for GUI server (default: "127.0.0.1", use "0.0.0.0" for remote access)
 	UpdateChannel       string `json:"update_channel"` // "release" or "pre-release"
 }
 
@@ -34,6 +35,7 @@ func DefaultConfig() Config {
 		RunInBackground:     true,
 		MaxBackups:          20,
 		GUIPort:             9099,
+		GUIBindAddr:         "127.0.0.1", // Default to localhost for security
 		UpdateChannel:       "release",
 	}
 }

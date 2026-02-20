@@ -44,7 +44,21 @@ This guide shows how to deploy DevProxy on a remote VPS with a custom domain (e.
 
 ## Agent Configuration
 
-The host agent will be accessible at `http://proxy.yourdomain.com:9099`
+### Bind Address for Remote Access
+
+By default, the agent GUI binds to `127.0.0.1` (localhost only) for security. To make the agent accessible from the network (e.g., on your VPS), use the `--bind-addr` flag:
+
+```bash
+# Bind to all interfaces (accessible from network)
+sudo ./devproxy-agent --bind-addr 0.0.0.0
+
+# Default (localhost only, more secure)
+sudo ./devproxy-agent
+```
+
+**Security Note:** Only use `--bind-addr 0.0.0.0` on trusted networks or behind a firewall. For VPS deployments, consider using a reverse proxy with authentication instead.
+
+The agent will be accessible at `http://proxy.yourdomain.com:9099` when running on the VPS with `--bind-addr 0.0.0.0`.
 
 ### Download Agent on Remote Machine
 
@@ -66,7 +80,10 @@ curl -O http://proxy.yourdomain.com:8090/api/agent/download/linux
 # Make executable
 chmod +x devproxy-agent
 
-# Run (requires sudo for hosts file access)
+# Run on VPS (bind to all interfaces for remote access)
+sudo ./devproxy-agent --api-url http://proxy.yourdomain.com:8090 --bind-addr 0.0.0.0
+
+# Or run on local machine (default localhost binding)
 sudo ./devproxy-agent --api-url http://proxy.yourdomain.com:8090
 ```
 

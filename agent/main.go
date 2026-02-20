@@ -22,6 +22,7 @@ import (
 func main() {
 	configDir := flag.String("config-dir", "", "Config directory (default: platform-specific)")
 	apiURL := flag.String("api-url", "", "DevProxy API URL (overrides config)")
+	bindAddr := flag.String("bind-addr", "", "GUI server bind address (default: 127.0.0.1, use 0.0.0.0 for remote access)")
 	noTray := flag.Bool("no-tray", false, "Disable system tray icon")
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
@@ -47,10 +48,17 @@ func main() {
 		config.Update(cfg)
 	}
 
+	// Override bind address if specified
+	if *bindAddr != "" {
+		cfg := config.Get()
+		cfg.GUIBindAddr = *bindAddr
+		config.Update(cfg)
+	}
+
 	cfg := config.Get()
 
 	// Start the config GUI web server
-	gui.Start(cfg.GUIPort)
+	gui.Start(cfg.GUIPort, cfg.GUIBindAddr)
 
 	// Start the sync engine
 	agentsync.Start()

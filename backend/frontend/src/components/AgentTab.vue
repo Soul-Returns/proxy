@@ -120,9 +120,11 @@ sudo mv devproxy-agent /usr/local/bin/</pre>
         <pre>devproxy-agent [flags]
 
   --api-url string    DevProxy API URL (default "http://localhost:8090")
+  --bind-addr string  GUI bind address (default "127.0.0.1", use "0.0.0.0" for remote access)
   --config-dir string Config directory (default: platform-specific)
   --no-tray           Disable system tray icon
   --version           Print version and exit</pre>
+        <p class="hint">💡 <strong>Remote Access:</strong> Use <code>--bind-addr 0.0.0.0</code> to make the agent GUI accessible from the network (e.g., for VPS deployments). Default is <code>127.0.0.1</code> (localhost only) for security.</p>
       </div>
     </div>
 
